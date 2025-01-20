@@ -12,10 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fab839dd7ca00c245a27f60ac66a89bb, type: 3}
   m_Name: TestCard
   m_EditorClassIdentifier: 
-  cardName: A of Clubs
-  rank: 1
-  suit: 1
-  artwork: {fileID: 21300000, guid: da9559cb0e487684280fba019bfc5e3d, type: 3}
-  baseScore: 11
+  cardName: Four of Swords
+  rank: 4
+  suit: 3
+  artwork: {fileID: 0}
+  spriteAtlas: {fileID: 100100200, guid: e959efa91a86eb648959b2c102b150cb, type: 3}
+  baseScore: 10
   stickers: []
   maxStickers: 3

@@ -1,11 +1,9 @@
 fileFormatVersion: 2
-guid: fab839dd7ca00c245a27f60ac66a89bb
+guid: 553eb2186ce5e4d4f91fc8bbf4213500
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences:
-  - artwork: {instanceID: 0}
-  - spriteAtlas: {fileID: 100100200, guid: e959efa91a86eb648959b2c102b150cb, type: 3}
+  defaultReferences: []
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

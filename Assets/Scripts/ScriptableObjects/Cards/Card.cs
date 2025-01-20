@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.U2D;
 
 [CreateAssetMenu(fileName = "NewCard", menuName = "Cards/Card")]
 public class Card : ScriptableObject
@@ -8,6 +9,7 @@ public class Card : ScriptableObject
     [ReadOnly]
     [SerializeField]
     private string cardName;
+    public string CardName => cardName; // Propiedad pública de solo lectura.
 
     [Tooltip("The rank of the card (A to K).")]
     public Rank rank;
@@ -17,7 +19,15 @@ public class Card : ScriptableObject
 
     [Header("Visual Representation")]
     [Tooltip("Sprite used to visually represent the card.")]
-    public Sprite artwork;
+    [ReadOnly]
+    [SerializeField]
+    private Sprite artwork;
+
+    [Tooltip("Reference to the Sprite Atlas containing card images.")]
+    [SerializeField]
+    private SpriteAtlas spriteAtlas;
+
+    public Sprite Artwork => artwork; // Getter público para acceder al artwork.
 
     [Header("Gameplay Properties")]
     [Tooltip("Base score of the card, automatically set based on rank.")]
@@ -25,7 +35,7 @@ public class Card : ScriptableObject
     [SerializeField]
     private int baseScore;
 
-    public int BaseScore => baseScore; // Public getter to access the base score.
+    public int BaseScore => baseScore; // Getter público para acceder al baseScore.
 
     [Header("Stickers")]
     [Tooltip("ScriptableObjects that define stickers attached to this card.")]
@@ -39,7 +49,7 @@ public class Card : ScriptableObject
     public int MaxStickers
     {
         get => maxStickers;
-        set => maxStickers = Mathf.Max(0, value); // Ensure the value is not negative.
+        set => maxStickers = Mathf.Max(0, value); // Asegura que el valor no sea negativo.
     }
 
     /// <summary>
@@ -55,7 +65,7 @@ public class Card : ScriptableObject
             return false;
         }
 
-        // Add the sticker to the array
+        // Add the sticker to the array.
         var newStickers = new Sticker[stickers.Length + 1];
         stickers.CopyTo(newStickers, 0);
         newStickers[stickers.Length] = sticker;
@@ -83,10 +93,36 @@ public class Card : ScriptableObject
             baseScore = 10;
         }
 
+        // Automatically assign the artwork based on rank and suit.
+        AssignArtwork();
+
         // Ensure stickers array length does not exceed maxStickers.
         if (stickers.Length > maxStickers)
         {
             System.Array.Resize(ref stickers, maxStickers);
+        }
+    }
+
+    private void AssignArtwork()
+    {
+        if (spriteAtlas == null || suit == Suit.None)
+        {
+            Debug.LogWarning($"Card '{cardName}' cannot assign artwork: Missing suit or Sprite Atlas.");
+            return;
+        }
+
+        // Format the sprite name based on rank and suit.
+        string spriteName = $"{rank}_{suit}";
+
+        // Attempt to get the sprite from the atlas.
+        Sprite loadedSprite = spriteAtlas.GetSprite(spriteName);
+        if (loadedSprite != null)
+        {
+            artwork = loadedSprite;
+        }
+        else
+        {
+            Debug.LogWarning($"Sprite '{spriteName}' not found in Sprite Atlas '{spriteAtlas.name}'.");
         }
     }
 
