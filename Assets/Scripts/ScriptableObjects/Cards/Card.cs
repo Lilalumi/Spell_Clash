@@ -52,11 +52,6 @@ public class Card : ScriptableObject
         set => maxStickers = Mathf.Max(0, value); // Asegura que el valor no sea negativo.
     }
 
-    /// <summary>
-    /// Adds a sticker to the card if the current count is below the maximum limit.
-    /// </summary>
-    /// <param name="sticker">The sticker to add.</param>
-    /// <returns>True if the sticker was added; false otherwise.</returns>
     public bool AddSticker(Sticker sticker)
     {
         if (stickers.Length >= maxStickers)
@@ -65,7 +60,6 @@ public class Card : ScriptableObject
             return false;
         }
 
-        // Add the sticker to the array.
         var newStickers = new Sticker[stickers.Length + 1];
         stickers.CopyTo(newStickers, 0);
         newStickers[stickers.Length] = sticker;
@@ -76,38 +70,44 @@ public class Card : ScriptableObject
 
     private void OnValidate()
     {
-        // Set the card name based on rank and suit.
         cardName = $"{rank} of {suit}";
+        UpdateBaseScore();
 
-        // Determine the base score.
+        if (spriteAtlas != null)
+        {
+            AssignArtwork();
+        }
+    }
+
+    /// <summary>
+    /// Updates the base score of the card based on its rank.
+    /// </summary>
+    public void UpdateBaseScore()
+    {
         if (rank == Rank.A)
         {
             baseScore = 11;
         }
         else if (rank >= Rank.Two && rank <= Rank.Ten)
         {
-            baseScore = 10;
+            baseScore = (int)rank;
         }
         else // J, Q, K
         {
             baseScore = 10;
         }
-
-        // Prevent AssignArtwork from running if the Sprite Atlas is not assigned
-        if (spriteAtlas != null)
-        {
-            AssignArtwork();
-        }
     }
-    /// <summary>
-    /// Assigns a Sprite Atlas to the card and updates its artwork based on rank and suit.
-    /// </summary>
-    /// <param name="atlas">The Sprite Atlas to assign.</param>
+
     public void AssignSpriteAtlas(SpriteAtlas atlas)
     {
         spriteAtlas = atlas;
 
-        // Update artwork based on Rank and Suit
+        if (rank == Rank.None || suit == Suit.None)
+        {
+            artwork = null;
+            return;
+        }
+
         string spriteName = $"{rank}_{suit}";
         Sprite loadedSprite = spriteAtlas.GetSprite(spriteName);
         if (loadedSprite != null)
@@ -122,16 +122,13 @@ public class Card : ScriptableObject
 
     private void AssignArtwork()
     {
-        if (spriteAtlas == null || suit == Suit.None)
+        if (spriteAtlas == null || rank == Rank.None || suit == Suit.None)
         {
-            Debug.LogWarning($"Card '{cardName}' cannot assign artwork: Missing suit or Sprite Atlas.");
+            artwork = null;
             return;
         }
 
-        // Format the sprite name based on rank and suit.
         string spriteName = $"{rank}_{suit}";
-
-        // Attempt to get the sprite from the atlas.
         Sprite loadedSprite = spriteAtlas.GetSprite(spriteName);
         if (loadedSprite != null)
         {
