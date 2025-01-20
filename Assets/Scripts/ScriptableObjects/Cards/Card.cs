@@ -93,13 +93,30 @@ public class Card : ScriptableObject
             baseScore = 10;
         }
 
-        // Automatically assign the artwork based on rank and suit.
-        AssignArtwork();
-
-        // Ensure stickers array length does not exceed maxStickers.
-        if (stickers.Length > maxStickers)
+        // Prevent AssignArtwork from running if the Sprite Atlas is not assigned
+        if (spriteAtlas != null)
         {
-            System.Array.Resize(ref stickers, maxStickers);
+            AssignArtwork();
+        }
+    }
+    /// <summary>
+    /// Assigns a Sprite Atlas to the card and updates its artwork based on rank and suit.
+    /// </summary>
+    /// <param name="atlas">The Sprite Atlas to assign.</param>
+    public void AssignSpriteAtlas(SpriteAtlas atlas)
+    {
+        spriteAtlas = atlas;
+
+        // Update artwork based on Rank and Suit
+        string spriteName = $"{rank}_{suit}";
+        Sprite loadedSprite = spriteAtlas.GetSprite(spriteName);
+        if (loadedSprite != null)
+        {
+            artwork = loadedSprite;
+        }
+        else
+        {
+            Debug.LogWarning($"Sprite '{spriteName}' not found in Sprite Atlas '{spriteAtlas.name}'.");
         }
     }
 
@@ -128,6 +145,7 @@ public class Card : ScriptableObject
 
     public enum Rank
     {
+        None = 0,
         A = 1,
         Two = 2,
         Three = 3,
