@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[RequireComponent(typeof(RectTransform))]
+[RequireComponent(typeof(Transform))] // Requiere un Transform estándar en lugar de RectTransform
 public class DeckComponent : MonoBehaviour
 {
     [Header("Deck Configuration")]

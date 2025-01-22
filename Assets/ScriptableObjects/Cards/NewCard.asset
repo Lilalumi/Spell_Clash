@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fab839dd7ca00c245a27f60ac66a89bb, type: 3}
   m_Name: NewCard
   m_EditorClassIdentifier: 
-  cardName: 
-  rank: 0
-  suit: 0
+  cardName: Q of Diamonds
+  rank: 12
+  suit: 2
   artwork: {fileID: 0}
   spriteAtlas: {fileID: 100100200, guid: e959efa91a86eb648959b2c102b150cb, type: 3}
-  baseScore: 0
+  baseScore: 10
   stickers: []
   maxStickers: 3

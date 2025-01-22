@@ -1,41 +1,135 @@
 using UnityEngine;
-using UnityEngine.UI;
 
-[RequireComponent(typeof(Image))]
+[RequireComponent(typeof(SpriteRenderer))]
+[RequireComponent(typeof(BoxCollider2D))]
 public class CardAssignment : MonoBehaviour
 {
+    [Header("Card Data")]
     [SerializeField]
     private Card card;
 
-    private Image cardImage;
+    [Header("Card Sprites")]
+    [Tooltip("Sprite used for the back of the card.")]
+    [SerializeField]
+    private Sprite cardBackSprite;
+
+    [Header("Card State")]
+    [Tooltip("Is the card currently face up?")]
+    [SerializeField]
+    private bool isFaceUp = false; // Toggle for card state in the inspector
+
+    [Header("Flip Settings")]
+    [Tooltip("Speed of the card flip animation.")]
+    [SerializeField]
+    private float flipSpeed = 0.25f; // Default flip speed
+
+    private SpriteRenderer cardSpriteRenderer;
+    private Vector3 originalScale; // To store the original scale of the object
 
     private void Awake()
     {
-        cardImage = GetComponent<Image>();
+        // Obtain the SpriteRenderer and save the original scale
+        InitializeSpriteRenderer();
+        originalScale = transform.localScale;
+
+        // Ensure there's a BoxCollider2D for interaction
+        EnsureBoxCollider();
     }
 
     private void Start()
     {
+        // Assign the initial card state
         AssignCard(card);
+        UpdateCardState();
     }
 
+    private void OnValidate()
+    {
+        // Ensure SpriteRenderer is initialized in the editor
+        InitializeSpriteRenderer();
+        UpdateCardState();
+    }
+
+    /// <summary>
+    /// Ensures the SpriteRenderer is assigned.
+    /// </summary>
+    private void InitializeSpriteRenderer()
+    {
+        if (cardSpriteRenderer == null)
+        {
+            cardSpriteRenderer = GetComponent<SpriteRenderer>();
+        }
+    }
+
+    /// <summary>
+    /// Ensures the object has a BoxCollider2D.
+    /// </summary>
+    private void EnsureBoxCollider()
+    {
+        BoxCollider2D collider = GetComponent<BoxCollider2D>();
+        if (collider == null)
+        {
+            collider = gameObject.AddComponent<BoxCollider2D>();
+        }
+        collider.isTrigger = true; // Set collider to trigger mode
+    }
+
+    /// <summary>
+    /// Asigna un ScriptableObject de tipo Card al SpriteRenderer.
+    /// </summary>
+    /// <param name="newCard">La carta a asignar.</param>
     public void AssignCard(Card newCard)
     {
         if (newCard == null)
         {
-            Debug.LogWarning("No card assigned.");
             return;
         }
 
         card = newCard;
+        UpdateCardState();
+    }
 
-        if (card.Artwork != null)
+    /// <summary>
+    /// Updates the sprite based on whether the card is face up or face down.
+    /// </summary>
+    private void UpdateCardState()
+    {
+        if (cardSpriteRenderer == null)
         {
-            cardImage.sprite = card.Artwork;
+            return;
         }
-        else
+
+        // Show the appropriate side of the card
+        cardSpriteRenderer.sprite = isFaceUp && card != null && card.Artwork != null ? card.Artwork : cardBackSprite;
+    }
+
+    /// <summary>
+    /// Flips the card with an animation using LeanTween.
+    /// </summary>
+    public void FlipCard()
+    {
+        bool targetState = !isFaceUp; // Determine the new state of the card
+
+        // Flip the card with LeanTween and restore original scale
+        LeanTween.scaleX(gameObject, 0f, flipSpeed).setOnComplete(() =>
         {
-            Debug.LogWarning($"Card '{card.CardName}' does not have an artwork assigned.");
-        }
+            isFaceUp = targetState;
+            UpdateCardState();
+            LeanTween.scaleX(gameObject, originalScale.x, flipSpeed); // Restore original scale
+        });
+    }
+
+    private void OnMouseDown()
+    {
+        // Detects clicks on the card
+        HandleClick();
+    }
+
+    /// <summary>
+    /// Handles card interaction when clicked or tapped.
+    /// </summary>
+    private void HandleClick()
+    {
+        FlipCard(); // Flip the card when clicked
     }
 }
