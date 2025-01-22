@@ -20,7 +20,6 @@ public class DeckComponent : MonoBehaviour
     {
         if (newDeckSO == null)
         {
-            Debug.LogWarning("Cannot assign a null Deck ScriptableObject.");
             return;
         }
 
@@ -36,21 +35,17 @@ public class DeckComponent : MonoBehaviour
         // Validate deckSO
         if (deckSO == null)
         {
-            Debug.LogError("Deck ScriptableObject is null. Cannot populate the deck.");
             return;
         }
 
         int currentChildCount = transform.childCount;
         int deckCardCount = deckSO.Cards.Count;
 
-        Debug.Log($"Populating deck. Current children: {currentChildCount}, Deck SO cards: {deckCardCount}");
-
         // Step 1: Destroy extra children
         if (currentChildCount > deckCardCount)
         {
             for (int i = currentChildCount - 1; i >= deckCardCount; i--)
             {
-                Debug.Log($"Destroying extra child: {transform.GetChild(i).name}");
                 DestroyImmediate(transform.GetChild(i).gameObject);
             }
         }
@@ -62,8 +57,6 @@ public class DeckComponent : MonoBehaviour
             GameObject newCard = Instantiate(cardPrefab, transform);
             newCard.name = $"Card_{cardData.rank}_{cardData.suit}";
             AssignCardData(newCard, cardData);
-
-            Debug.Log($"Instantiated new card: {newCard.name}");
         }
 
         // Step 3: Update all existing cards
@@ -76,8 +69,6 @@ public class DeckComponent : MonoBehaviour
             cardTransform.name = $"Card_{cardData.rank}_{cardData.suit}";
             AssignCardData(cardTransform.gameObject, cardData);
         }
-
-        Debug.Log($"Deck populated. Total cards: {transform.childCount}");
     }
 
     /// <summary>
@@ -89,10 +80,6 @@ public class DeckComponent : MonoBehaviour
         if (cardAssignment != null)
         {
             cardAssignment.AssignCard(cardData);
-        }
-        else
-        {
-            Debug.LogWarning($"Card {cardObject.name} is missing the CardAssignment component.");
         }
     }
 

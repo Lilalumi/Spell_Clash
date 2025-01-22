@@ -43,7 +43,6 @@ public class DeckGenerator : MonoBehaviour
     /// </summary>
     private IEnumerator GenerateDeckCoroutine()
     {
-        Debug.Log("Starting deck generation...");
         CurrentDeckState = DeckState.Generating;
 
         // Simulate some delay for deck generation (optional, for testing)
@@ -51,7 +50,6 @@ public class DeckGenerator : MonoBehaviour
 
         GenerateDeck();
 
-        Debug.Log("Deck generation completed.");
         CurrentDeckState = DeckState.Generated;
     }
 
@@ -59,7 +57,6 @@ public class DeckGenerator : MonoBehaviour
     {
         if (GeneratedDeckObject != null)
         {
-            Debug.LogWarning("Deck has already been generated.");
             return GeneratedDeckObject;
         }
 
@@ -82,7 +79,6 @@ public class DeckGenerator : MonoBehaviour
                 tempCard.AssignSpriteAtlas(spriteAtlas);
 
                 temporaryCards.Add(tempCard);
-                Debug.Log($"Generated card: {tempCard.rank} of {tempCard.suit}");
             }
         }
 
@@ -98,12 +94,6 @@ public class DeckGenerator : MonoBehaviour
         if (deckComponent != null)
         {
             deckComponent.AssignDeck(temporaryDeck);
-        }
-
-        Debug.Log("Deck successfully generated with cards:");
-        foreach (var card in temporaryDeck.Cards)
-        {
-            Debug.Log($" - {card.rank} of {card.suit}");
         }
 
         return GeneratedDeckObject;
@@ -144,6 +134,5 @@ public class DeckGenerator : MonoBehaviour
         }
 
         CurrentDeckState = DeckState.None;
-        Debug.Log("Temporary deck data cleaned up.");
     }
 }

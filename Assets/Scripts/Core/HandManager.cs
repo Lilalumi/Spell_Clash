@@ -30,20 +30,14 @@ public class HandManager : MonoBehaviour
     private void Awake()
     {
         handAreaCollider = GetComponent<BoxCollider2D>();
-        if (handAreaCollider == null)
-        {
-            Debug.LogError("PlayerHand object is missing a BoxCollider2D component.");
-        }
     }
 
     private void Start()
     {
-        Debug.Log("HandManager started. Waiting for deck generation...");
         DeckGenerator deckGenerator = FindObjectOfType<DeckGenerator>();
 
         if (deckGenerator == null)
         {
-            Debug.LogError("DeckGenerator not found in the scene. Ensure that a DeckGenerator is present.");
             return;
         }
 
@@ -54,11 +48,8 @@ public class HandManager : MonoBehaviour
     {
         while (deckGenerator.CurrentDeckState != DeckState.Generated)
         {
-            Debug.Log("Waiting for deck to be generated...");
             yield return null;
         }
-
-        Debug.Log("Deck generation complete. Preparing to initialize the hand.");
 
         GameObject generatedDeckObject = deckGenerator.GeneratedDeckObject;
         if (generatedDeckObject != null)
@@ -66,13 +57,8 @@ public class HandManager : MonoBehaviour
             InitializeDeck(generatedDeckObject.transform);
             if (deckCardsQueue.Count > 0)
             {
-                Debug.Log("Starting initial draw.");
                 yield return StartCoroutine(DrawMultipleCards(handSize));
             }
-        }
-        else
-        {
-            Debug.LogError("Generated Deck GameObject is null. Ensure DeckGenerator generates the Deck.");
         }
     }
 
@@ -84,18 +70,14 @@ public class HandManager : MonoBehaviour
             if (cardTransform != null && cardTransform.gameObject != null)
             {
                 deckCardsQueue.Enqueue(cardTransform.gameObject);
-                Debug.Log($"Added card {cardTransform.gameObject.name} to deck queue.");
             }
         }
-
-        Debug.Log($"Deck initialized with {deckCardsQueue.Count} cards.");
     }
 
     public IEnumerator DrawMultipleCards(int amount)
     {
         if (isDrawingCards)
         {
-            Debug.LogWarning("Already drawing cards. Wait for the current operation to finish.");
             yield break;
         }
 
@@ -113,69 +95,42 @@ public class HandManager : MonoBehaviour
 
     public void DrawCard()
     {
-        if (handCards.Count >= handSize)
+        if (handCards.Count >= handSize || deckCardsQueue.Count == 0)
         {
-            Debug.LogWarning("Cannot draw more cards: hand is full.");
-            return;
-        }
-
-        if (deckCardsQueue.Count == 0)
-        {
-            Debug.LogWarning("Cannot draw more cards: deck is empty.");
             return;
         }
 
         GameObject cardObject = deckCardsQueue.Dequeue();
 
-        if (cardObject == null)
+        if (cardObject == null || handCards.Contains(cardObject))
         {
-            Debug.LogWarning("Attempted to draw a null card from the deck. Skipping this card.");
-            return;
-        }
-
-        if (handCards.Contains(cardObject))
-        {
-            Debug.LogWarning($"Card {cardObject.name} is already in hand. Skipping.");
             return;
         }
 
         cardObject.transform.SetParent(transform, true);
         handCards.Add(cardObject);
 
-        // Reposiciona las cartas después de agregar una nueva
         RedistributeCards();
 
-        // Flip de la carta a su posición boca arriba
         LeanTween.delayedCall(moveDuration, () =>
         {
             CardAssignment cardAssignment = cardObject.GetComponent<CardAssignment>();
             if (cardAssignment != null)
             {
-                cardAssignment.FlipCard(); // Usa el método FlipCard de CardAssignment
-                Debug.Log($"Card {cardObject.name} flipped face up.");
-            }
-            else
-            {
-                Debug.LogWarning($"Card {cardObject.name} is missing the CardAssignment component.");
+                cardAssignment.FlipCard();
             }
         });
-
-        Debug.Log($"Card {cardObject.name} moved to hand. Cards in hand: {handCards.Count}. Cards left in deck: {deckCardsQueue.Count}.");
     }
-
 
     public void RemoveCard(GameObject cardObject)
     {
         if (!handCards.Contains(cardObject))
         {
-            Debug.LogWarning($"Card {cardObject.name} is not in the hand.");
             return;
         }
 
         handCards.Remove(cardObject);
         RedistributeCards();
-
-        Debug.Log($"Card {cardObject.name} removed from hand. Remaining cards in hand: {handCards.Count}.");
     }
 
     private void RedistributeCards()
@@ -197,22 +152,17 @@ public class HandManager : MonoBehaviour
 
             LeanTween.move(cardObject, targetPosition, moveDuration).setEase(LeanTweenType.easeInOutQuad).setOnComplete(() =>
             {
-                // Flip de la carta a su posición boca arriba si es necesario
                 CardAssignment cardAssignment = cardObject.GetComponent<CardAssignment>();
-                if (cardAssignment != null && !cardAssignment.IsFaceUp) // Asegúrate de que no se voltee dos veces
+                if (cardAssignment != null && !cardAssignment.IsFaceUp)
                 {
                     LeanTween.delayedCall(flipDuration, () =>
                     {
                         cardAssignment.FlipCard();
-                        Debug.Log($"Card {cardObject.name} flipped face up during redistribution.");
                     });
                 }
             });
-
-            Debug.Log($"Card {cardObject.name} repositioned to {targetPosition}.");
         }
     }
-
 
     public void ClearHand()
     {
@@ -221,6 +171,5 @@ public class HandManager : MonoBehaviour
             Destroy(card);
         }
         handCards.Clear();
-        Debug.Log("Hand cleared.");
     }
 }
