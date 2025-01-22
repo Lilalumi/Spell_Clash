@@ -1,6 +1,14 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.U2D;
+
+public enum DeckState
+{
+    None,       // Sin mazo generado
+    Generating, // Mazo en proceso de generación
+    Generated   // Mazo generado y listo
+}
 
 public class DeckGenerator : MonoBehaviour
 {
@@ -15,13 +23,47 @@ public class DeckGenerator : MonoBehaviour
     private List<Card> temporaryCards = new List<Card>();
     private Deck temporaryDeck;
 
+    /// <summary>
+    /// Property to store the generated Deck GameObject.
+    /// </summary>
+    public GameObject GeneratedDeckObject { get; private set; }
+
+    /// <summary>
+    /// Current state of the deck.
+    /// </summary>
+    public DeckState CurrentDeckState { get; private set; } = DeckState.None;
+
     private void Start()
     {
+        StartCoroutine(GenerateDeckCoroutine());
+    }
+
+    /// <summary>
+    /// Coroutine to generate the deck and update its state.
+    /// </summary>
+    private IEnumerator GenerateDeckCoroutine()
+    {
+        Debug.Log("Starting deck generation...");
+        CurrentDeckState = DeckState.Generating;
+
+        // Simulate some delay for deck generation (optional, for testing)
+        yield return new WaitForSeconds(0.5f);
+
         GenerateDeck();
+
+        Debug.Log("Deck generation completed.");
+        CurrentDeckState = DeckState.Generated;
     }
 
     public GameObject GenerateDeck()
     {
+        if (GeneratedDeckObject != null)
+        {
+            Debug.LogWarning("Deck has already been generated.");
+            return GeneratedDeckObject;
+        }
+
+        // Crear el Deck ScriptableObject
         temporaryDeck = ScriptableObject.CreateInstance<Deck>();
         temporaryDeck.name = "TemporaryDeck";
 
@@ -39,19 +81,43 @@ public class DeckGenerator : MonoBehaviour
                 tempCard.UpdateBaseScore();
                 tempCard.AssignSpriteAtlas(spriteAtlas);
 
-                temporaryDeck.AddCard(tempCard);
                 temporaryCards.Add(tempCard);
+                Debug.Log($"Generated card: {tempCard.rank} of {tempCard.suit}");
             }
         }
 
-        GameObject newDeckObject = Instantiate(deckPrefab, transform);
-        DeckComponent deckComponent = newDeckObject.GetComponent<DeckComponent>();
+        ShuffleCards(temporaryCards);
+
+        foreach (Card card in temporaryCards)
+        {
+            temporaryDeck.AddCard(card);
+        }
+
+        GeneratedDeckObject = Instantiate(deckPrefab, transform);
+        DeckComponent deckComponent = GeneratedDeckObject.GetComponent<DeckComponent>();
         if (deckComponent != null)
         {
             deckComponent.AssignDeck(temporaryDeck);
         }
 
-        return newDeckObject;
+        Debug.Log("Deck successfully generated with cards:");
+        foreach (var card in temporaryDeck.Cards)
+        {
+            Debug.Log($" - {card.rank} of {card.suit}");
+        }
+
+        return GeneratedDeckObject;
+    }
+
+    private void ShuffleCards(List<Card> cards)
+    {
+        for (int i = cards.Count - 1; i > 0; i--)
+        {
+            int randomIndex = Random.Range(0, i + 1);
+            Card temp = cards[i];
+            cards[i] = cards[randomIndex];
+            cards[randomIndex] = temp;
+        }
     }
 
     public void CleanupTemporaryData()
@@ -70,5 +136,14 @@ public class DeckGenerator : MonoBehaviour
             DestroyImmediate(temporaryDeck);
             temporaryDeck = null;
         }
+
+        if (GeneratedDeckObject != null)
+        {
+            Destroy(GeneratedDeckObject);
+            GeneratedDeckObject = null;
+        }
+
+        CurrentDeckState = DeckState.None;
+        Debug.Log("Temporary deck data cleaned up.");
     }
 }

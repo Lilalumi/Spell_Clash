@@ -12,11 +12,10 @@ GameObject:
   - component: {fileID: 2647839970388874194}
   - component: {fileID: 743074027596745772}
   - component: {fileID: 7720812078368766200}
-  - component: {fileID: 6589389444302143210}
-  - component: {fileID: 2029437388800626704}
-  - component: {fileID: 8532286910465360215}
+  - component: {fileID: 2101597833771969433}
+  - component: {fileID: 8256100444614256167}
   m_Layer: 0
-  m_Name: Card
+  m_Name: Card 1
   m_TagString: Card
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -150,7 +149,7 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 0.93, y: 1.37}
   m_EdgeRadius: 0
---- !u!114 &6589389444302143210
+--- !u!114 &2101597833771969433
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -162,27 +161,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ad7888b40f532f54a907ad16a84e55b1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHoverTilt: 200
+  maxHoverTilt: 400
   clickTilt: 400
   animationDuration: 0.2
---- !u!114 &2029437388800626704
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9111848729827294644}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 05a624263321f7e4c83413f5ea1a2b35, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  maxPositionX: 0.1
-  maxPositionY: 0.1
-  maxRotationZ: 5
-  hoverSpeed: 0.5
-  randomSeedRange: {x: 0, y: 100}
---- !u!114 &8532286910465360215
+--- !u!114 &8256100444614256167
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

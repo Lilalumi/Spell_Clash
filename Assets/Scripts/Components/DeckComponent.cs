@@ -29,35 +29,70 @@ public class DeckComponent : MonoBehaviour
     }
 
     /// <summary>
-    /// Clears all existing cards and repopulates the deck with cards from the assigned Deck ScriptableObject.
+    /// Updates the deck using existing cards instead of instantiating new ones.
     /// </summary>
     private void PopulateDeck()
     {
-        // Clear existing cards
-        foreach (Transform child in transform)
+        // Validate deckSO
+        if (deckSO == null)
         {
-            Destroy(child.gameObject);
+            Debug.LogError("Deck ScriptableObject is null. Cannot populate the deck.");
+            return;
         }
 
-        // Instantiate cards based on the Deck ScriptableObject
-        foreach (Card card in deckSO.Cards)
+        int currentChildCount = transform.childCount;
+        int deckCardCount = deckSO.Cards.Count;
+
+        Debug.Log($"Populating deck. Current children: {currentChildCount}, Deck SO cards: {deckCardCount}");
+
+        // Step 1: Destroy extra children
+        if (currentChildCount > deckCardCount)
         {
-            // Instantiate the card prefab as a child of this object
-            GameObject cardObject = Instantiate(cardPrefab, transform);
-
-            // Set the card's name dynamically
-            cardObject.name = $"Card_{card.rank}_{card.suit}";
-
-            // Assign the card data to the prefab
-            CardAssignment cardAssignment = cardObject.GetComponent<CardAssignment>();
-            if (cardAssignment != null)
+            for (int i = currentChildCount - 1; i >= deckCardCount; i--)
             {
-                cardAssignment.AssignCard(card);
+                Debug.Log($"Destroying extra child: {transform.GetChild(i).name}");
+                DestroyImmediate(transform.GetChild(i).gameObject);
             }
-            else
-            {
-                Debug.LogWarning($"Card prefab is missing the CardAssignment component.");
-            }
+        }
+
+        // Step 2: Add missing cards
+        for (int i = currentChildCount; i < deckCardCount; i++)
+        {
+            Card cardData = deckSO.Cards[i];
+            GameObject newCard = Instantiate(cardPrefab, transform);
+            newCard.name = $"Card_{cardData.rank}_{cardData.suit}";
+            AssignCardData(newCard, cardData);
+
+            Debug.Log($"Instantiated new card: {newCard.name}");
+        }
+
+        // Step 3: Update all existing cards
+        for (int i = 0; i < deckCardCount; i++)
+        {
+            Transform cardTransform = transform.GetChild(i);
+            Card cardData = deckSO.Cards[i];
+
+            // Rename for clarity and assign data
+            cardTransform.name = $"Card_{cardData.rank}_{cardData.suit}";
+            AssignCardData(cardTransform.gameObject, cardData);
+        }
+
+        Debug.Log($"Deck populated. Total cards: {transform.childCount}");
+    }
+
+    /// <summary>
+    /// Assigns data from a Card ScriptableObject to a card GameObject.
+    /// </summary>
+    private void AssignCardData(GameObject cardObject, Card cardData)
+    {
+        CardAssignment cardAssignment = cardObject.GetComponent<CardAssignment>();
+        if (cardAssignment != null)
+        {
+            cardAssignment.AssignCard(cardData);
+        }
+        else
+        {
+            Debug.LogWarning($"Card {cardObject.name} is missing the CardAssignment component.");
         }
     }
 

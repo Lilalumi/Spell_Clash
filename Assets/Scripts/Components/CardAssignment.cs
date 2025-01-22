@@ -26,6 +26,8 @@ public class CardAssignment : MonoBehaviour
     private SpriteRenderer cardSpriteRenderer;
     private Vector3 originalScale; // To store the original scale of the object
 
+    public bool IsFaceUp => isFaceUp; // Public getter to check if the card is face up
+
     private void Awake()
     {
         // Obtain the SpriteRenderer and save the original scale
@@ -75,9 +77,9 @@ public class CardAssignment : MonoBehaviour
     }
 
     /// <summary>
-    /// Asigna un ScriptableObject de tipo Card al SpriteRenderer.
+    /// Assigns a ScriptableObject of type Card to the SpriteRenderer.
     /// </summary>
-    /// <param name="newCard">La carta a asignar.</param>
+    /// <param name="newCard">The card to assign.</param>
     public void AssignCard(Card newCard)
     {
         if (newCard == null)
@@ -117,19 +119,5 @@ public class CardAssignment : MonoBehaviour
             UpdateCardState();
             LeanTween.scaleX(gameObject, originalScale.x, flipSpeed); // Restore original scale
         });
-    }
-
-    private void OnMouseDown()
-    {
-        // Detects clicks on the card
-        HandleClick();
-    }
-
-    /// <summary>
-    /// Handles card interaction when clicked or tapped.
-    /// </summary>
-    private void HandleClick()
-    {
-        FlipCard(); // Flip the card when clicked
     }
 }
