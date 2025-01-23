@@ -28,7 +28,7 @@ public class HandManager : MonoBehaviour
 
     private Queue<GameObject> deckCardsQueue = new Queue<GameObject>();
     private List<GameObject> handCards = new List<GameObject>();
-    private HashSet<GameObject> highlightedCards = new HashSet<GameObject>(); // Cartas seleccionadas
+    private HashSet<GameObject> highlightedCards = new HashSet<GameObject>();
     private BoxCollider2D handAreaCollider;
     private bool isDrawingCards = false;
 
@@ -40,11 +40,7 @@ public class HandManager : MonoBehaviour
     private void Start()
     {
         DeckGenerator deckGenerator = FindObjectOfType<DeckGenerator>();
-
-        if (deckGenerator == null)
-        {
-            return;
-        }
+        if (deckGenerator == null) return;
 
         StartCoroutine(WaitForDeckAndDealInitialHand(deckGenerator));
     }
@@ -81,10 +77,7 @@ public class HandManager : MonoBehaviour
 
     public IEnumerator DrawMultipleCards(int amount)
     {
-        if (isDrawingCards)
-        {
-            yield break;
-        }
+        if (isDrawingCards) yield break;
 
         isDrawingCards = true;
 
@@ -100,17 +93,11 @@ public class HandManager : MonoBehaviour
 
     public void DrawCard()
     {
-        if (handCards.Count >= handSize || deckCardsQueue.Count == 0)
-        {
-            return;
-        }
+        if (handCards.Count >= handSize || deckCardsQueue.Count == 0) return;
 
         GameObject cardObject = deckCardsQueue.Dequeue();
 
-        if (cardObject == null || handCards.Contains(cardObject))
-        {
-            return;
-        }
+        if (cardObject == null || handCards.Contains(cardObject)) return;
 
         cardObject.transform.SetParent(transform, true);
         handCards.Add(cardObject);
@@ -129,13 +116,10 @@ public class HandManager : MonoBehaviour
 
     public void RemoveCard(GameObject cardObject)
     {
-        if (!handCards.Contains(cardObject))
-        {
-            return;
-        }
+        if (!handCards.Contains(cardObject)) return;
 
         handCards.Remove(cardObject);
-        highlightedCards.Remove(cardObject); // Asegurar que se elimine si estaba seleccionada
+        highlightedCards.Remove(cardObject);
         RedistributeCards();
     }
 
@@ -160,31 +144,20 @@ public class HandManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Handles highlighting of a card. Called by the card itself via CardHighlight.
-    /// </summary>
     public bool TryHighlightCard(GameObject cardObject)
     {
         if (highlightedCards.Contains(cardObject))
         {
-            // Deselecciona la carta
             highlightedCards.Remove(cardObject);
-            return true; // Deseleccionado exitosamente
+            return true;
         }
 
-        if (highlightedCards.Count >= maxHighlightedCards)
-        {
-            return false; // Límite alcanzado
-        }
+        if (highlightedCards.Count >= maxHighlightedCards) return false;
 
-        // Selecciona la carta
         highlightedCards.Add(cardObject);
         return true;
     }
 
-    /// <summary>
-    /// Returns the list of currently highlighted cards.
-    /// </summary>
     public IReadOnlyCollection<GameObject> GetHighlightedCards()
     {
         return highlightedCards;
@@ -200,34 +173,32 @@ public class HandManager : MonoBehaviour
         highlightedCards.Clear();
     }
 
-    public void ReorderCards(GameObject draggedCard, GameObject targetCard)
+    public void EvaluateHand()
     {
-        if (!handCards.Contains(draggedCard) || !handCards.Contains(targetCard)) return;
+        if (highlightedCards.Count == 0) return;
 
-        // Eliminar y reinsertar la carta en la nueva posición
-        handCards.Remove(draggedCard);
-        int targetIndex = handCards.IndexOf(targetCard);
-        handCards.Insert(targetIndex, draggedCard);
+        PokerHandManager pokerHandManager = FindObjectOfType<PokerHandManager>();
+        if (pokerHandManager != null)
+        {
+            pokerHandManager.EvaluateHand();
+        }
     }
-    /// <summary>
-    /// Encuentra la carta más cercana a la posición dada, excluyendo la carta arrastrada.
-    /// </summary>
-    /// <param name="position">La posición desde la cual buscar la carta más cercana.</param>
-    /// <param name="draggedCard">La carta que se está arrastrando (se excluye de la búsqueda).</param>
-    /// <returns>La carta más cercana como GameObject, o null si no hay cartas cercanas.</returns>
-    public GameObject GetClosestCard(Vector3 position, GameObject draggedCard)
+
+    public GameObject GetClosestCard(Vector3 position, GameObject excludeCard = null)
     {
-        float minDistance = float.MaxValue;
+        if (handCards.Count == 0) return null;
+
         GameObject closestCard = null;
+        float closestDistance = float.MaxValue;
 
         foreach (GameObject card in handCards)
         {
-            if (card == draggedCard) continue; // Excluir la carta arrastrada de la búsqueda
+            if (card == excludeCard) continue;
 
-            float distance = Vector3.Distance(position, card.transform.position);
-            if (distance < minDistance)
+            float distance = Vector3.Distance(card.transform.position, position);
+            if (distance < closestDistance)
             {
-                minDistance = distance;
+                closestDistance = distance;
                 closestCard = card;
             }
         }
@@ -235,4 +206,16 @@ public class HandManager : MonoBehaviour
         return closestCard;
     }
 
+    public void ReorderCards(GameObject card, GameObject targetCard)
+    {
+        if (card == null || targetCard == null) return;
+
+        if (!handCards.Contains(card) || !handCards.Contains(targetCard)) return;
+
+        handCards.Remove(card);
+        int targetIndex = handCards.IndexOf(targetCard);
+        handCards.Insert(targetIndex, card);
+
+        RedistributeCards();
+    }
 }

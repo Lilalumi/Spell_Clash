@@ -15,6 +15,9 @@ public class CardHighlight : MonoBehaviour
     private Vector3 basePosition; // Position to return to when not highlighted
     private bool isHighlighted = false; // Flag for the current highlight state
     private HandManager handManager; // Reference to HandManager in PlayerHand
+    private PokerHandManager pokerHandManager; // Reference to PokerHandManager
+    private Vector3 highlightedPosition; // Position when highlighted
+    private Vector3 originalPosition;    // Original position
 
     /// <summary>
     /// Indicates if the card is currently highlighted.
@@ -30,17 +33,21 @@ public class CardHighlight : MonoBehaviour
     private void Start()
     {
         UpdateHandManagerReference(); // Assign the HandManager if applicable
+        LocatePokerHandManager(); // Locate PokerHandManager in the scene
+        originalPosition = transform.position;
+        highlightedPosition = originalPosition + Vector3.up * highlightOffset;
+    }
+
+    private void LocatePokerHandManager()
+    {
+        pokerHandManager = FindObjectOfType<PokerHandManager>();
     }
 
     private void OnTransformParentChanged()
     {
-        // Called when the parent of the card changes
         UpdateHandManagerReference();
     }
 
-    /// <summary>
-    /// Ensures the card has a BoxCollider2D for mouse or touch interaction.
-    /// </summary>
     private void EnsureBoxCollider()
     {
         BoxCollider2D collider = GetComponent<BoxCollider2D>();
@@ -48,26 +55,14 @@ public class CardHighlight : MonoBehaviour
         {
             collider = gameObject.AddComponent<BoxCollider2D>();
         }
-        collider.isTrigger = true; // Set collider to trigger mode for interaction
+        collider.isTrigger = true;
     }
 
-    /// <summary>
-    /// Updates the reference to HandManager when the card becomes part of PlayerHand.
-    /// </summary>
     private void UpdateHandManagerReference()
     {
         if (transform.parent != null)
         {
             handManager = transform.parent.GetComponent<HandManager>();
-        }
-
-        if (handManager == null)
-        {
-            // Log only if the card is part of PlayerHand but doesn't find a HandManager
-            if (IsInPlayerHand())
-            {
-                Debug.LogError($"HandManager not found in parent hierarchy for {gameObject.name}.");
-            }
         }
     }
 
@@ -75,67 +70,53 @@ public class CardHighlight : MonoBehaviour
     {
         if (handManager == null)
         {
-            Debug.LogWarning($"HandManager is missing. Cannot toggle highlight for {gameObject.name}.");
             return;
         }
 
         if (isHighlighted)
         {
-            // Deselect the card
-            if (handManager.TryHighlightCard(gameObject)) // This removes it from HandManager
+            if (handManager.TryHighlightCard(gameObject))
             {
                 DeselectCard();
             }
         }
         else
         {
-            // Try to highlight the card
-            if (handManager.TryHighlightCard(gameObject)) // This adds it to HandManager
+            if (handManager.TryHighlightCard(gameObject))
             {
                 HighlightCard();
             }
         }
     }
 
-    /// <summary>
-    /// Highlights the card by moving it upward.
-    /// </summary>
     private void HighlightCard()
     {
         isHighlighted = true;
         LeanTween.moveY(gameObject, basePosition.y + highlightOffset, highlightDuration)
                  .setEase(LeanTweenType.easeOutQuad);
+
+        pokerHandManager?.EvaluateHand(); // Notify PokerHandManager
     }
 
-    /// <summary>
-    /// Deselects the card by returning it to its base position.
-    /// </summary>
     private void DeselectCard()
     {
         isHighlighted = false;
         LeanTween.moveY(gameObject, basePosition.y, highlightDuration)
                  .setEase(LeanTweenType.easeOutQuad);
+
+        pokerHandManager?.EvaluateHand(); // Notify PokerHandManager
     }
 
-    /// <summary>
-    /// Updates the base position of the card based on its current position.
-    /// </summary>
     public void UpdateBasePosition()
     {
         basePosition = transform.position;
     }
 
-    /// <summary>
-    /// Checks if the card is a child of PlayerHand.
-    /// </summary>
     private bool IsInPlayerHand()
     {
         return transform.parent != null && transform.parent.GetComponent<HandManager>() != null;
     }
 
-    /// <summary>
-    /// Automatically updates the base position if the card is moved.
-    /// </summary>
     private void LateUpdate()
     {
         if (!isHighlighted)

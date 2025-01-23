@@ -120,4 +120,9 @@ public class CardAssignment : MonoBehaviour
             LeanTween.scaleX(gameObject, originalScale.x, flipSpeed); // Restore original scale
         });
     }
+    public Card GetAssignedCard()
+    {
+        return card; // 'card' debe ser la referencia al ScriptableObject asociado
+    }
+
 }
