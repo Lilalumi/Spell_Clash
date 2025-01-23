@@ -139,7 +139,7 @@ public class HandManager : MonoBehaviour
         RedistributeCards();
     }
 
-    private void RedistributeCards()
+    public void RedistributeCards()
     {
         if (handCards.Count == 0) return;
 
@@ -199,4 +199,40 @@ public class HandManager : MonoBehaviour
         handCards.Clear();
         highlightedCards.Clear();
     }
+
+    public void ReorderCards(GameObject draggedCard, GameObject targetCard)
+    {
+        if (!handCards.Contains(draggedCard) || !handCards.Contains(targetCard)) return;
+
+        // Eliminar y reinsertar la carta en la nueva posición
+        handCards.Remove(draggedCard);
+        int targetIndex = handCards.IndexOf(targetCard);
+        handCards.Insert(targetIndex, draggedCard);
+    }
+    /// <summary>
+    /// Encuentra la carta más cercana a la posición dada, excluyendo la carta arrastrada.
+    /// </summary>
+    /// <param name="position">La posición desde la cual buscar la carta más cercana.</param>
+    /// <param name="draggedCard">La carta que se está arrastrando (se excluye de la búsqueda).</param>
+    /// <returns>La carta más cercana como GameObject, o null si no hay cartas cercanas.</returns>
+    public GameObject GetClosestCard(Vector3 position, GameObject draggedCard)
+    {
+        float minDistance = float.MaxValue;
+        GameObject closestCard = null;
+
+        foreach (GameObject card in handCards)
+        {
+            if (card == draggedCard) continue; // Excluir la carta arrastrada de la búsqueda
+
+            float distance = Vector3.Distance(position, card.transform.position);
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                closestCard = card;
+            }
+        }
+
+        return closestCard;
+    }
+
 }
