@@ -10,6 +10,10 @@ public class HandManager : MonoBehaviour
     [SerializeField]
     private int handSize = 5;
 
+    [Tooltip("Maximum number of cards that can be highlighted.")]
+    [SerializeField]
+    private int maxHighlightedCards = 5;
+
     [Tooltip("Duration of the animation for cards moving to the hand.")]
     [SerializeField]
     private float moveDuration = 0.5f;
@@ -24,6 +28,7 @@ public class HandManager : MonoBehaviour
 
     private Queue<GameObject> deckCardsQueue = new Queue<GameObject>();
     private List<GameObject> handCards = new List<GameObject>();
+    private HashSet<GameObject> highlightedCards = new HashSet<GameObject>(); // Cartas seleccionadas
     private BoxCollider2D handAreaCollider;
     private bool isDrawingCards = false;
 
@@ -130,6 +135,7 @@ public class HandManager : MonoBehaviour
         }
 
         handCards.Remove(cardObject);
+        highlightedCards.Remove(cardObject); // Asegurar que se elimine si estaba seleccionada
         RedistributeCards();
     }
 
@@ -150,18 +156,38 @@ public class HandManager : MonoBehaviour
             GameObject cardObject = handCards[i];
             Vector3 targetPosition = new Vector3(startX + (i * cardSpacing), colliderCenter.y, 0);
 
-            LeanTween.move(cardObject, targetPosition, moveDuration).setEase(LeanTweenType.easeInOutQuad).setOnComplete(() =>
-            {
-                CardAssignment cardAssignment = cardObject.GetComponent<CardAssignment>();
-                if (cardAssignment != null && !cardAssignment.IsFaceUp)
-                {
-                    LeanTween.delayedCall(flipDuration, () =>
-                    {
-                        cardAssignment.FlipCard();
-                    });
-                }
-            });
+            LeanTween.move(cardObject, targetPosition, moveDuration).setEase(LeanTweenType.easeInOutQuad);
         }
+    }
+
+    /// <summary>
+    /// Handles highlighting of a card. Called by the card itself via CardHighlight.
+    /// </summary>
+    public bool TryHighlightCard(GameObject cardObject)
+    {
+        if (highlightedCards.Contains(cardObject))
+        {
+            // Deselecciona la carta
+            highlightedCards.Remove(cardObject);
+            return true; // Deseleccionado exitosamente
+        }
+
+        if (highlightedCards.Count >= maxHighlightedCards)
+        {
+            return false; // Límite alcanzado
+        }
+
+        // Selecciona la carta
+        highlightedCards.Add(cardObject);
+        return true;
+    }
+
+    /// <summary>
+    /// Returns the list of currently highlighted cards.
+    /// </summary>
+    public IReadOnlyCollection<GameObject> GetHighlightedCards()
+    {
+        return highlightedCards;
     }
 
     public void ClearHand()
@@ -171,5 +197,6 @@ public class HandManager : MonoBehaviour
             Destroy(card);
         }
         handCards.Clear();
+        highlightedCards.Clear();
     }
 }

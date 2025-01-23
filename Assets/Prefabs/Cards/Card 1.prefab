@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 7720812078368766200}
   - component: {fileID: 2101597833771969433}
   - component: {fileID: 8256100444614256167}
+  - component: {fileID: 7595677459617808470}
   m_Layer: 0
   m_Name: Card 1
   m_TagString: Card
@@ -178,3 +179,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   shadowOffset: {x: 0.05, y: -0.05}
   shadowColor: {r: 0, g: 0, b: 0, a: 0.5}
+--- !u!114 &7595677459617808470
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9111848729827294644}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4899b8bdcc9333645b7e9ebde913088d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  highlightOffset: 0.5
+  highlightDuration: 0.25
