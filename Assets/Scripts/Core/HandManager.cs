@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 [RequireComponent(typeof(BoxCollider2D))]
@@ -138,11 +139,24 @@ public class HandManager : MonoBehaviour
         for (int i = 0; i < handCards.Count; i++)
         {
             GameObject cardObject = handCards[i];
+            CardHighlight cardHighlight = cardObject.GetComponent<CardHighlight>();
+
+            // Verificar si la carta está destacada
+            bool isHighlighted = cardHighlight != null && cardHighlight.IsHighlighted;
+
+            // Posición base (sin destacar)
             Vector3 targetPosition = new Vector3(startX + (i * cardSpacing), colliderCenter.y, 0);
+
+            // Ajustar posición si está destacada
+            if (isHighlighted)
+            {
+                targetPosition += Vector3.up * cardHighlight.highlightOffset; // Usar el offset de la carta destacada
+            }
 
             LeanTween.move(cardObject, targetPosition, moveDuration).setEase(LeanTweenType.easeInOutQuad);
         }
     }
+
 
     public bool TryHighlightCard(GameObject cardObject)
     {
@@ -216,6 +230,28 @@ public class HandManager : MonoBehaviour
         int targetIndex = handCards.IndexOf(targetCard);
         handCards.Insert(targetIndex, card);
 
+        RedistributeCards();
+    }
+
+    public void SortHandByRank()
+    {
+        handCards.Sort((a, b) =>
+        {
+            var cardA = a.GetComponent<CardAssignment>().GetAssignedCard();
+            var cardB = b.GetComponent<CardAssignment>().GetAssignedCard();
+            return cardA.rank.CompareTo(cardB.rank);
+        });
+        RedistributeCards();
+    }
+
+    public void SortHandBySuit()
+    {
+        handCards.Sort((a, b) =>
+        {
+            var cardA = a.GetComponent<CardAssignment>().GetAssignedCard();
+            var cardB = b.GetComponent<CardAssignment>().GetAssignedCard();
+            return cardA.suit.CompareTo(cardB.suit);
+        });
         RedistributeCards();
     }
 }

@@ -6,7 +6,7 @@ public class CardHighlight : MonoBehaviour
     [Header("Highlight Settings")]
     [Tooltip("Amount to move the card upward when highlighted.")]
     [SerializeField]
-    private float highlightOffset = 0.5f;
+    public float highlightOffset = 0.5f;
 
     [Tooltip("Duration of the highlight animation.")]
     [SerializeField]
