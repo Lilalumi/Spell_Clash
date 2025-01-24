@@ -638,7 +638,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pokerHandTypes:
+  - {fileID: 11400000, guid: 7c587170dd66aff4cafd615ea238d259, type: 2}
+  - {fileID: 11400000, guid: b9aa1ab6398779a48b9b4cd7b450af06, type: 2}
+  - {fileID: 11400000, guid: 7ce444aa91de8e440815e1f0ecf4fc41, type: 2}
   - {fileID: 11400000, guid: 4d700895a1ae73541a99529551172c52, type: 2}
+  - {fileID: 11400000, guid: 5f338bb2d0d8f5f48903dfe47a10cfd5, type: 2}
+  - {fileID: 11400000, guid: bf659e3ce6b9be94c9aeb1490a3f49d8, type: 2}
+  - {fileID: 11400000, guid: 4827e2746712e974da88a0ed7c9dd8fe, type: 2}
+  - {fileID: 11400000, guid: b7a1d2b7062891f49b1eaf20a3ac1ab1, type: 2}
+  - {fileID: 11400000, guid: 18f3bc1caa00ffe4580c7047eacfa090, type: 2}
+  - {fileID: 11400000, guid: 436c9460f988aed409d6b8bb597a98d4, type: 2}
+  - {fileID: 11400000, guid: 5e376184a3e790c4b9906e6ae40d64fc, type: 2}
+  - {fileID: 11400000, guid: 5a1bfd002468bfe47bfb02fda0eb3daa, type: 2}
   playerHand: {fileID: 1349895193}
   resultText: {fileID: 216581707}
 --- !u!1 &1349895191
