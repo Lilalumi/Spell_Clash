@@ -23,6 +23,16 @@ public class PokerScoreManager : MonoBehaviour
     [Header("Timing Settings")]
     [Tooltip("Time in seconds before moving the hand to discard.")]
     [SerializeField] private float displayDuration = 2.0f;
+
+    [Header("Card Positioning")]
+    [Tooltip("Spacing between cards in PlayArea.")]
+    [SerializeField] private float playAreaSpacing = 0.5f;
+
+    [Tooltip("Height offset for scoring cards.")]
+    [SerializeField] private float scoringCardYOffset = 0.5f;
+
+    [Tooltip("Offset when cards disappear to discard.")]
+    [SerializeField] private float discardOffsetX = 0.3f;
     
     private List<GameObject> playedCards = new List<GameObject>();
     private List<GameObject> unplayedCards = new List<GameObject>();
@@ -82,8 +92,8 @@ public class PokerScoreManager : MonoBehaviour
         totalGameScore += finalScore;
         UpdateTotalScoreUI();
 
-        // 🔹 Esperar antes de descartar la mano y reponer cartas
-        StartCoroutine(WaitBeforeDiscarding(playedCards));
+        // 🔹 Primero, mover TODAS las cartas a su posición en PlayArea
+        StartCoroutine(MoveCardsToPlayArea(playedCards, validCards));
     }
 
     /// <summary>
@@ -198,18 +208,58 @@ public class PokerScoreManager : MonoBehaviour
         }
     }
 
-    private IEnumerator WaitBeforeDiscarding(List<GameObject> playedCards)
+    private IEnumerator MoveCardsToPlayArea(List<GameObject> playedCards, List<Card> scoringCards)
     {
-        Debug.Log($"[PokerScoreManager] - Waiting {displayDuration} seconds before discarding...");
+        Debug.Log("[PokerScoreManager] - Moving cards to PlayArea...");
 
-        // 🔹 Esperar el tiempo configurado antes de descartar
+        Vector3 startPos = playArea.position - new Vector3((playedCards.Count - 1) * playAreaSpacing / 2, 0, 0);
+
+        for (int i = 0; i < playedCards.Count; i++)
+        {
+            GameObject cardObject = playedCards[i];
+            Vector3 targetPosition = startPos + new Vector3(i * playAreaSpacing, 0, 0);
+
+            LeanTween.move(cardObject, targetPosition, 0.5f).setEase(LeanTweenType.easeInOutQuad);
+        }
+
+        yield return new WaitForSeconds(0.6f); // Esperar a que termine el movimiento
+
+        // 🔹 Ahora, elevar solo las cartas que cuentan para el puntaje
+        AdjustScoringCardPositions(playedCards, scoringCards);
+
         yield return new WaitForSeconds(displayDuration);
 
+        // 🔹 Después de la espera, descartar las cartas y reponer nuevas
+        StartCoroutine(WaitBeforeDiscarding(playedCards));
+    }
+
+    private void AdjustScoringCardPositions(List<GameObject> playedCards, List<Card> scoringCards)
+    {
+        foreach (GameObject cardObject in playedCards)
+        {
+            CardAssignment cardData = cardObject.GetComponent<CardAssignment>();
+            if (cardData == null) continue;
+
+            bool isScoringCard = scoringCards.Contains(cardData.GetAssignedCard());
+
+            Vector3 targetPosition = cardObject.transform.position;
+            if (isScoringCard)
+            {
+                targetPosition.y += scoringCardYOffset;
+            }
+
+            LeanTween.move(cardObject, targetPosition, 0.3f).setEase(LeanTweenType.easeInOutQuad);
+        }
+    }
+
+    private IEnumerator WaitBeforeDiscarding(List<GameObject> playedCards)
+    {
         Debug.Log($"[PokerScoreManager] - Moving {playedCards.Count} cards to discard.");
 
         foreach (GameObject card in playedCards)
         {
-            LeanTween.move(card, discardArea.position, 0.5f)
+            Vector3 discardTarget = discardArea.position + new Vector3(discardOffsetX, 0, 0);
+            LeanTween.move(card, discardTarget, 0.5f)
                 .setEase(LeanTweenType.easeInOutQuad)
                 .setOnComplete(() =>
                 {
@@ -218,10 +268,8 @@ public class PokerScoreManager : MonoBehaviour
                 });
         }
 
-        // 🔹 Esperar un poco para asegurarnos de que todas las cartas han sido descartadas
         yield return new WaitForSeconds(0.6f);
 
-        // 🔹 Robar nuevas cartas para reponer la mano
         if (handManager != null)
         {
             StartCoroutine(handManager.DrawMultipleCards(playedCards.Count));
