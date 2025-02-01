@@ -13,10 +13,15 @@ public class PokerScoreManager : MonoBehaviour
     [Header("Hand References")]
     [Tooltip("The Play Area where played cards are moved.")]
     [SerializeField] private Transform playArea;
-
+    [SerializeField] private Transform discardArea;
+    [SerializeField] private HandManager handManager;
     [Tooltip("The Player Hand where unplayed cards remain.")]
     [SerializeField] private Transform playerHand;
-
+    
+    [Header("Timing Settings")]
+    [Tooltip("Time in seconds before moving the hand to discard.")]
+    [SerializeField] private float displayDuration = 2.0f;
+    
     private List<GameObject> playedCards = new List<GameObject>();
     private List<GameObject> unplayedCards = new List<GameObject>();
     private int baseScore = 0;
@@ -34,8 +39,6 @@ public class PokerScoreManager : MonoBehaviour
             return;
         }
 
-        scoringCards.Clear();
-
         // 🔹 Obtener TODAS las cartas jugadas en PlayArea
         List<GameObject> playedCards = new List<GameObject>();
         foreach (Transform card in playArea)
@@ -46,33 +49,33 @@ public class PokerScoreManager : MonoBehaviour
         Debug.Log($"[PokerScoreManager] - Total cards in PlayArea: {playedCards.Count}");
 
         // 🔹 Obtener SOLO las cartas que forman la combinación válida
-        List<Card> validCards = bestHand.logic.GetValidCardsForHand(playedCards
-            .Select(c => c.GetComponent<CardAssignment>().GetAssignedCard())
-            .ToList());
+        List<Card> validCards = bestHand.logic.GetValidCardsForHand(
+            playedCards.Select(c => c.GetComponent<CardAssignment>().GetAssignedCard()).ToList()
+        );
 
         Debug.Log($"[PokerScoreManager] - Scoring cards count: {validCards.Count}");
 
-        // 🔹 Obtener Base Score y Multiplier de la lógica de la mano
-        int baseScore = bestHand.logic.GetBaseScore(validCards.ToArray(), bestHand);
-        int multiplier = bestHand.logic.GetMultiplier(validCards.ToArray(), bestHand);
-        
-        Debug.Log($"[PokerScoreManager] - Base Score from Hand: {baseScore}");
-        Debug.Log($"[PokerScoreManager] - Multiplier from Hand: {multiplier}");
+        // 🔹 Obtener el puntaje base de la mano
+        int totalBaseScore = bestHand.GetTotalScore();
+        Debug.Log($"[PokerScoreManager] - Base Score from Hand: {totalBaseScore}");
 
-        // 🔹 Sumar los valores individuales de cada carta
+        // 🔹 Sumar los puntajes individuales de cada carta
         foreach (Card card in validCards)
         {
-            baseScore += card.baseScore;
-            Debug.Log($"[PokerScoreManager] - Adding {card.rank} of {card.suit} -> New Base Score: {baseScore}");
+            totalBaseScore += card.baseScore;
+            Debug.Log($"[PokerScoreManager] - Added {card.rank} of {card.suit} -> Base Score: {card.baseScore} | New Total: {totalBaseScore}");
         }
 
         // 🔹 Aplicar el multiplicador FINALMENTE
-        int finalScore = baseScore * multiplier;
-        Debug.Log($"[PokerScoreManager] - Final Score Calculation: ({baseScore} * {multiplier}) = {finalScore}");
+        int finalScore = totalBaseScore * bestHand.GetTotalMultiplier();
+        Debug.Log($"[PokerScoreManager] - Final Score Calculation: ({totalBaseScore} * {bestHand.GetTotalMultiplier()}) = {finalScore}");
 
         // 🔹 Actualizar la UI con el puntaje correcto
         scoreText.text = $"{bestHand.handName} lvl. {bestHand.currentLevel}\n" +
-                        $"{baseScore} x {multiplier} = {finalScore}";
+                        $"{totalBaseScore} x {bestHand.GetTotalMultiplier()} = {finalScore}";
+
+        // 🔹 Esperar antes de descartar la mano y reponer cartas
+        StartCoroutine(WaitBeforeDiscarding(playedCards));
     }
 
 
@@ -190,4 +193,71 @@ public class PokerScoreManager : MonoBehaviour
             Debug.LogError("ScoreText is not assigned in PokerScoreManager.");
         }
     }
+
+    private IEnumerator WaitBeforeDiscarding(List<GameObject> playedCards)
+    {
+        Debug.Log($"[PokerScoreManager] - Waiting {displayDuration} seconds before discarding...");
+
+        // 🔹 Esperar el tiempo configurado antes de descartar
+        yield return new WaitForSeconds(displayDuration);
+
+        Debug.Log($"[PokerScoreManager] - Moving {playedCards.Count} cards to discard.");
+
+        foreach (GameObject card in playedCards)
+        {
+            LeanTween.move(card, discardArea.position, 0.5f)
+                .setEase(LeanTweenType.easeInOutQuad)
+                .setOnComplete(() =>
+                {
+                    card.transform.SetParent(discardArea, true);
+                    card.SetActive(false);
+                });
+        }
+
+        // 🔹 Esperar un poco para asegurarnos de que todas las cartas han sido descartadas
+        yield return new WaitForSeconds(0.6f);
+
+        // 🔹 Robar nuevas cartas para reponer la mano
+        if (handManager != null)
+        {
+            StartCoroutine(handManager.DrawMultipleCards(playedCards.Count));
+        }
+        else
+        {
+            Debug.LogError("HandManager reference is missing in PokerScoreManager.");
+        }
+    }
+
+    private void DiscardPlayedHand(List<GameObject> playedCards)
+    {
+        if (discardArea == null)
+        {
+            Debug.LogError("Discard area is missing in PokerScoreManager.");
+            return;
+        }
+
+        Debug.Log($"[PokerScoreManager] - Moving {playedCards.Count} cards to discard.");
+
+        foreach (GameObject card in playedCards)
+        {
+            LeanTween.move(card, discardArea.position, 0.5f)
+                .setEase(LeanTweenType.easeInOutQuad)
+                .setOnComplete(() =>
+                {
+                    card.transform.SetParent(discardArea, true);
+                    card.SetActive(false);
+                });
+        }
+
+        // 🔹 Robar nuevas cartas para reponer la mano
+        if (handManager != null)
+        {
+            StartCoroutine(handManager.DrawMultipleCards(playedCards.Count));
+        }
+        else
+        {
+            Debug.LogError("HandManager reference is missing in PokerScoreManager.");
+        }
+    }
 }
+
