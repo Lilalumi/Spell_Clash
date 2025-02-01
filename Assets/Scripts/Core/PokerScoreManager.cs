@@ -9,6 +9,8 @@ public class PokerScoreManager : MonoBehaviour
     [Header("Score Display")]
     [Tooltip("UI Text to display the final score.")]
     [SerializeField] private TextMeshProUGUI scoreText;
+    [SerializeField] private TextMeshProUGUI totalScoreText; // 🔹 Nuevo TMP UI para el puntaje total
+
 
     [Header("Hand References")]
     [Tooltip("The Play Area where played cards are moved.")]
@@ -27,6 +29,8 @@ public class PokerScoreManager : MonoBehaviour
     private int baseScore = 0;
     private int multiplier = 1;
     private List<GameObject> scoringCards = new List<GameObject>(); // Cartas que suman puntos
+    private int totalGameScore = 0; // 🔹 Puntaje total de la partida
+
 
     /// <summary>
     /// Inicia la secuencia de puntuación basada en la mejor mano detectada.
@@ -74,13 +78,13 @@ public class PokerScoreManager : MonoBehaviour
         scoreText.text = $"{bestHand.handName} lvl. {bestHand.currentLevel}\n" +
                         $"{totalBaseScore} x {bestHand.GetTotalMultiplier()} = {finalScore}";
 
+        // 🔹 Agregar el puntaje final al puntaje total de la partida
+        totalGameScore += finalScore;
+        UpdateTotalScoreUI();
+
         // 🔹 Esperar antes de descartar la mano y reponer cartas
         StartCoroutine(WaitBeforeDiscarding(playedCards));
     }
-
-
-
-
 
     /// <summary>
     /// Identifies which cards are played and which remain in hand.
@@ -225,6 +229,14 @@ public class PokerScoreManager : MonoBehaviour
         else
         {
             Debug.LogError("HandManager reference is missing in PokerScoreManager.");
+        }
+    }
+
+    private void UpdateTotalScoreUI()
+    {
+        if (totalScoreText != null)
+        {
+            totalScoreText.text = $"Total Score: {totalGameScore}";
         }
     }
 
