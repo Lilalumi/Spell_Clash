@@ -1,48 +1,45 @@
 using UnityEngine;
 using System.Linq;
+using System.Collections.Generic;
 
 [CreateAssetMenu(fileName = "FourOfAKindLogic", menuName = "Poker/Logic/Four of a Kind")]
 public class FourOfAKindLogic : PokerHandLogic
 {
     public override bool IsValid(Card[] cards)
     {
-        if (cards.Length < 4) return false; // Un Four of a Kind necesita al menos 4 cartas
+        if (cards.Length < 4) return false; // Se necesitan al menos 4 cartas para formar un Four of a Kind.
 
-        // Agrupar cartas por su rango (Rank)
-        var rankGroups = cards
+        // Agrupar las cartas por su rango y verificar si hay un grupo con al menos 4 cartas.
+        return cards
             .GroupBy(card => card.rank)
-            .ToList();
-
-        // Verificar si hay un grupo con al menos 4 cartas
-        return rankGroups.Any(group => group.Count() == 4);
+            .Any(group => group.Count() == 4);
     }
 
-    public override int CalculateScore(Card[] cards, PokerHandType pokerHandType)
+    public override int GetBaseScore(Card[] cards, PokerHandType pokerHandType)
     {
-        if (!IsValid(cards)) return 0;
+        if (!IsValid(cards)) return 0; // Asegurarse de que la mano sea válida.
 
-        // Agrupar cartas por su rango (Rank)
-        var rankGroups = cards
+        return pokerHandType.GetTotalScore(); // Retorna solo el Base Score definido en el ScriptableObject.
+    }
+
+    public override int GetMultiplier(Card[] cards, PokerHandType pokerHandType)
+    {
+        if (!IsValid(cards)) return 1; // Evita multiplicar por 0.
+
+        return pokerHandType.GetTotalMultiplier(); // Retorna solo el Multiplicador definido en el ScriptableObject.
+    }
+
+    /// <summary>
+    /// Devuelve solo las cartas que forman parte del Four of a Kind válido.
+    /// </summary>
+    public override List<Card> GetValidCardsForHand(List<Card> playedCards)
+    {
+        var fourOfAKindGroup = playedCards
             .GroupBy(card => card.rank)
-            .OrderByDescending(group => group.Count())
-            .ThenByDescending(group => (int)group.Key) // Desempatar por rango más alto
-            .ToList();
-
-        // Obtener el grupo de Four of a Kind
-        var fourOfAKindGroup = rankGroups.First(group => group.Count() == 4);
-
-        // Obtener la carta más alta fuera del Four of a Kind (kicker)
-        var kicker = cards
-            .Where(card => card.rank != fourOfAKindGroup.Key)
-            .OrderByDescending(card => (int)card.rank)
+            .Where(group => group.Count() == 4)
+            .OrderByDescending(group => (int)group.Key)
             .FirstOrDefault();
 
-        // Usar la configuración del ScriptableObject para calcular el puntaje
-        int totalScore = pokerHandType.GetTotalScore();
-        int totalMultiplier = pokerHandType.GetTotalMultiplier();
-
-        Debug.Log($"Four of a Kind Detected: {fourOfAKindGroup.Key}s with kicker {kicker.rank}");
-
-        return totalScore * totalMultiplier;
+        return fourOfAKindGroup?.ToList() ?? new List<Card>();
     }
 }

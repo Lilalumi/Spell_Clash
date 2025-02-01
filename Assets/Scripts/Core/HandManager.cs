@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UI; // Necesario para trabajar con el componente Button
 
 [RequireComponent(typeof(BoxCollider2D))]
 public class HandManager : MonoBehaviour
@@ -10,6 +11,18 @@ public class HandManager : MonoBehaviour
     [Tooltip("Maximum number of cards allowed in the hand.")]
     [SerializeField]
     private int handSize = 5;
+
+    [Tooltip("Maximum times the discard action can be used.")]
+    [SerializeField]
+    private int discardAmount = 3;
+
+    [Tooltip("Transform where discarded cards will be placed.")]
+    [SerializeField]
+    private Transform discardArea;
+
+    [Tooltip("Duration of the animation for cards moving to discard.")]
+    [SerializeField]
+    private float discardDuration = 0.5f;
 
     [Tooltip("Maximum number of cards that can be highlighted.")]
     [SerializeField]
@@ -26,6 +39,11 @@ public class HandManager : MonoBehaviour
     [Tooltip("Time delay between distributing each card.")]
     [SerializeField]
     private float cardDelay = 0.2f;
+
+    [Header("UI Elements")]
+    [Tooltip("Button for discarding cards.")]
+    [SerializeField]
+    private Button discardButton;
 
     private Queue<GameObject> deckCardsQueue = new Queue<GameObject>();
     private List<GameObject> handCards = new List<GameObject>();
@@ -44,6 +62,7 @@ public class HandManager : MonoBehaviour
         if (deckGenerator == null) return;
 
         StartCoroutine(WaitForDeckAndDealInitialHand(deckGenerator));
+        UpdateDiscardButtonState();
     }
 
     private IEnumerator WaitForDeckAndDealInitialHand(DeckGenerator deckGenerator)
@@ -120,10 +139,10 @@ public class HandManager : MonoBehaviour
         if (!handCards.Contains(cardObject)) return;
 
         handCards.Remove(cardObject);
-        highlightedCards.Remove(cardObject);
+        highlightedCards.Remove(cardObject); // Asegura que no se sigan contando
         RedistributeCards();
     }
-
+    
     public void RedistributeCards()
     {
         if (handCards.Count == 0) return;
@@ -141,22 +160,18 @@ public class HandManager : MonoBehaviour
             GameObject cardObject = handCards[i];
             CardHighlight cardHighlight = cardObject.GetComponent<CardHighlight>();
 
-            // Verificar si la carta está destacada
             bool isHighlighted = cardHighlight != null && cardHighlight.IsHighlighted;
 
-            // Posición base (sin destacar)
             Vector3 targetPosition = new Vector3(startX + (i * cardSpacing), colliderCenter.y, 0);
 
-            // Ajustar posición si está destacada
             if (isHighlighted)
             {
-                targetPosition += Vector3.up * cardHighlight.highlightOffset; // Usar el offset de la carta destacada
+                targetPosition += Vector3.up * cardHighlight.highlightOffset;
             }
 
             LeanTween.move(cardObject, targetPosition, moveDuration).setEase(LeanTweenType.easeInOutQuad);
         }
     }
-
 
     public bool TryHighlightCard(GameObject cardObject)
     {
@@ -235,6 +250,8 @@ public class HandManager : MonoBehaviour
 
     public void SortHandByRank()
     {
+        handCards = handCards.Where(card => card.transform.parent == transform).ToList();
+
         handCards.Sort((a, b) =>
         {
             var cardA = a.GetComponent<CardAssignment>().GetAssignedCard();
@@ -246,6 +263,8 @@ public class HandManager : MonoBehaviour
 
     public void SortHandBySuit()
     {
+        handCards = handCards.Where(card => card.transform.parent == transform).ToList();
+
         handCards.Sort((a, b) =>
         {
             var cardA = a.GetComponent<CardAssignment>().GetAssignedCard();
@@ -253,5 +272,59 @@ public class HandManager : MonoBehaviour
             return cardA.suit.CompareTo(cardB.suit);
         });
         RedistributeCards();
+    }
+
+    /// <summary>
+    /// Discards all highlighted cards in the hand.
+    /// </summary>
+    public void DiscardHighlightedCards()
+    {
+        if (discardAmount <= 0)
+        {
+            
+            return;
+        }
+
+        List<GameObject> toDiscard = handCards.Where(card =>
+        {
+            var highlight = card.GetComponent<CardHighlight>();
+            return highlight != null && highlight.IsHighlighted;
+        }).ToList();
+
+        if (toDiscard.Count == 0)
+        {
+            
+            return;
+        }
+
+        foreach (GameObject card in toDiscard)
+        {
+            LeanTween.move(card, discardArea.position, discardDuration)
+                .setEase(LeanTweenType.easeInOutQuad)
+                .setOnComplete(() =>
+                {
+                    card.transform.SetParent(discardArea, true);
+                    card.SetActive(false);
+                });
+
+            RemoveCard(card);
+        }
+
+        discardAmount--;
+        UpdateDiscardButtonState();
+
+        StartCoroutine(DrawMultipleCards(toDiscard.Count));
+        RedistributeCards();
+    }
+
+    /// <summary>
+    /// Updates the discard button based on remaining discard actions.
+    /// </summary>
+    private void UpdateDiscardButtonState()
+    {
+        if (discardButton != null)
+        {
+            discardButton.interactable = discardAmount > 0;
+        }
     }
 }

@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Linq;
+using System.Collections.Generic;
 
 [CreateAssetMenu(fileName = "StraightLogic", menuName = "Poker/Logic/Straight")]
 public class StraightLogic : PokerHandLogic
@@ -27,35 +28,46 @@ public class StraightLogic : PokerHandLogic
         return false;
     }
 
-    public override int CalculateScore(Card[] cards, PokerHandType pokerHandType)
+    /// <summary>
+    /// Obtiene el puntaje base de la mano de Straight.
+    /// </summary>
+    public override int GetBaseScore(Card[] cards, PokerHandType pokerHandType)
     {
         if (!IsValid(cards)) return 0;
+        return pokerHandType.GetTotalScore(); // Solo devuelve la base, sin sumar cartas individuales
+    }
 
-        // Encuentra la carta más alta en la secuencia válida
-        var orderedRanks = cards
+    /// <summary>
+    /// Obtiene el multiplicador de la mano de Straight.
+    /// </summary>
+    public override int GetMultiplier(Card[] cards, PokerHandType pokerHandType)
+    {
+        if (!IsValid(cards)) return 1; // Evita multiplicar por 0
+        return pokerHandType.GetTotalMultiplier();
+    }
+
+    /// <summary>
+    /// Devuelve solo las cartas que forman parte del Straight válido.
+    /// </summary>
+    public override List<Card> GetValidCardsForHand(List<Card> playedCards)
+    {
+        var orderedRanks = playedCards
             .Select(card => (int)card.rank)
             .Distinct()
             .OrderBy(rank => rank)
             .ToList();
 
-        int highestInStraight = 0;
-
-        // Determinar la secuencia más alta
         for (int i = 0; i <= orderedRanks.Count - 5; i++)
         {
             if (orderedRanks[i + 4] - orderedRanks[i] == 4)
             {
-                highestInStraight = orderedRanks[i + 4];
-                break;
+                // Filtra solo las cartas que están en la secuencia
+                return playedCards
+                    .Where(card => orderedRanks.Contains((int)card.rank))
+                    .ToList();
             }
         }
 
-        // Usa la configuración de la mano para calcular el puntaje total
-        int totalScore = pokerHandType.GetTotalScore();
-        int totalMultiplier = pokerHandType.GetTotalMultiplier();
-
-        Debug.Log($"Straight Detected: Highest card is {highestInStraight}");
-
-        return totalScore * totalMultiplier;
+        return new List<Card>();
     }
 }

@@ -56,5 +56,6 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "Spell Clash.sln"
+    "dotnet.defaultSolution": "Spell Clash.sln",
+    "CodeGPT.apiKey": "OpenAI"
 }

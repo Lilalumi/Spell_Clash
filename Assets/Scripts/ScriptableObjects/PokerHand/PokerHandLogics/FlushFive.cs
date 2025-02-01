@@ -1,5 +1,6 @@
 using System.Linq;
 using UnityEngine;
+using System.Collections.Generic;
 
 [CreateAssetMenu(fileName = "FlushFiveLogic", menuName = "Poker/Logic/Flush Five")]
 public class FlushFiveLogic : PokerHandLogic
@@ -29,26 +30,31 @@ public class FlushFiveLogic : PokerHandLogic
         return false; // Si ninguna combinación cumple, no es válida
     }
 
-    public override int CalculateScore(Card[] cards, PokerHandType pokerHandType)
+    public override int GetBaseScore(Card[] cards, PokerHandType pokerHandType)
     {
         if (!IsValid(cards)) return 0;
 
-        // Obtener el grupo de 5 cartas del mismo palo y rango
-        var flushFiveGroup = cards
+        return pokerHandType.GetTotalScore(); // Solo devuelve la base, sin hacer cálculos extra
+    }
+
+    public override int GetMultiplier(Card[] cards, PokerHandType pokerHandType)
+    {
+        if (!IsValid(cards)) return 1; // Evita multiplicar por 0
+
+        return pokerHandType.GetTotalMultiplier(); // Solo devuelve el multiplicador, sin cálculos extra
+    }
+
+    /// <summary>
+    /// Devuelve solo las cartas que forman parte de la combinación Flush Five.
+    /// </summary>
+    public override List<Card> GetValidCardsForHand(List<Card> playedCards)
+    {
+        var flushFiveGroup = playedCards
             .GroupBy(card => card.suit)
             .Where(group => group.Count() >= 5)
             .Select(group => group.GroupBy(card => card.rank).FirstOrDefault(subGroup => subGroup.Count() == 5))
             .FirstOrDefault(subGroup => subGroup != null);
 
-        if (flushFiveGroup != null)
-        {
-            int totalScore = pokerHandType.GetTotalScore();
-            int totalMultiplier = pokerHandType.GetTotalMultiplier();
-
-            Debug.Log($"Flush Five Detected: Rank - {flushFiveGroup.Key}, Suit - {flushFiveGroup.First().suit}");
-            return totalScore * totalMultiplier;
-        }
-
-        return 0; // Si algo falla, retorna 0
+        return flushFiveGroup?.ToList() ?? new List<Card>();
     }
 }

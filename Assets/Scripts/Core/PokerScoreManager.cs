@@ -1,117 +1,193 @@
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
-using TMPro; // Importar TextMeshPro
+using TMPro;
 
-public class PokerHandManager : MonoBehaviour
+public class PokerScoreManager : MonoBehaviour
 {
-    [Header("Poker Hands")]
-    [Tooltip("Lista de tipos de manos de poker disponibles.")]
-    [SerializeField]
-    private List<PokerHandType> pokerHandTypes;
+    [Header("Score Display")]
+    [Tooltip("UI Text to display the final score.")]
+    [SerializeField] private TextMeshProUGUI scoreText;
 
-    [Tooltip("Referencia al objeto PlayerHand.")]
-    [SerializeField]
-    private Transform playerHand;
+    [Header("Hand References")]
+    [Tooltip("The Play Area where played cards are moved.")]
+    [SerializeField] private Transform playArea;
 
-    [Header("UI Settings")]
-    [Tooltip("Referencia al objeto TextMeshPro - Text para mostrar los resultados.")]
-    [SerializeField]
-    private TextMeshProUGUI resultText;
+    [Tooltip("The Player Hand where unplayed cards remain.")]
+    [SerializeField] private Transform playerHand;
 
-    private void Awake()
-    {
-        if (playerHand == null)
-        {
-            Debug.LogError("PlayerHand reference is missing in PokerHandManager.");
-        }
-        else
-        {
-            Debug.Log($"PlayerHand assigned: {playerHand.name}");
-        }
-    }
+    private List<GameObject> playedCards = new List<GameObject>();
+    private List<GameObject> unplayedCards = new List<GameObject>();
+    private int baseScore = 0;
+    private int multiplier = 1;
+    private List<GameObject> scoringCards = new List<GameObject>(); // Cartas que suman puntos
 
     /// <summary>
-    /// Llama a este método cuando una carta es highlighted o su estado cambia.
+    /// Inicia la secuencia de puntuación basada en la mejor mano detectada.
     /// </summary>
-    public void EvaluateHand()
+    public void StartScoring(PokerHandType bestHand)
     {
-        // Obtener las cartas highlightedeadas
-        List<Card> highlightedCards = GetHighlightedCards();
-
-        if (highlightedCards.Count == 0)
+        if (bestHand == null)
         {
-            UpdateResultText("No highlighted cards detected.");
+            Debug.LogError("No valid poker hand detected. Cannot start scoring.");
             return;
         }
 
-        // Verificar combinaciones posibles
-        PokerHandType bestHand = null;
-        int highestScore = 0;
+        scoringCards.Clear();
 
-        foreach (var handType in pokerHandTypes)
+        // 🔹 Obtener TODAS las cartas jugadas en PlayArea
+        List<GameObject> playedCards = new List<GameObject>();
+        foreach (Transform card in playArea)
         {
-            if (handType.logic.IsValid(highlightedCards.ToArray()))
-            {
-                int score = handType.logic.CalculateScore(highlightedCards.ToArray(), handType);
-
-                if (score > highestScore)
-                {
-                    highestScore = score;
-                    bestHand = handType;
-                }
-            }
+            playedCards.Add(card.gameObject);
         }
 
-        if (bestHand != null)
+        Debug.Log($"[PokerScoreManager] - Total cards in PlayArea: {playedCards.Count}");
+
+        // 🔹 Obtener SOLO las cartas que forman la combinación válida
+        List<Card> validCards = bestHand.logic.GetValidCardsForHand(playedCards
+            .Select(c => c.GetComponent<CardAssignment>().GetAssignedCard())
+            .ToList());
+
+        Debug.Log($"[PokerScoreManager] - Scoring cards count: {validCards.Count}");
+
+        // 🔹 Obtener Base Score y Multiplier de la lógica de la mano
+        int baseScore = bestHand.logic.GetBaseScore(validCards.ToArray(), bestHand);
+        int multiplier = bestHand.logic.GetMultiplier(validCards.ToArray(), bestHand);
+        
+        Debug.Log($"[PokerScoreManager] - Base Score from Hand: {baseScore}");
+        Debug.Log($"[PokerScoreManager] - Multiplier from Hand: {multiplier}");
+
+        // 🔹 Sumar los valores individuales de cada carta
+        foreach (Card card in validCards)
         {
-            // Formatear el texto con los datos de la mano
-            string resultMessage = $"{bestHand.handName.ToUpper()} LVL {bestHand.currentLevel}\n" +
-                                   $"{bestHand.baseScore} X {bestHand.multiplier} = {highestScore}";
-            UpdateResultText(resultMessage);
+            baseScore += card.baseScore;
+            Debug.Log($"[PokerScoreManager] - Adding {card.rank} of {card.suit} -> New Base Score: {baseScore}");
         }
-        else
+
+        // 🔹 Aplicar el multiplicador FINALMENTE
+        int finalScore = baseScore * multiplier;
+        Debug.Log($"[PokerScoreManager] - Final Score Calculation: ({baseScore} * {multiplier}) = {finalScore}");
+
+        // 🔹 Actualizar la UI con el puntaje correcto
+        scoreText.text = $"{bestHand.handName} lvl. {bestHand.currentLevel}\n" +
+                        $"{baseScore} x {multiplier} = {finalScore}";
+    }
+
+
+
+
+
+    /// <summary>
+    /// Identifies which cards are played and which remain in hand.
+    /// </summary>
+    private void IdentifyPlayedAndUnplayedCards()
+    {
+        foreach (Transform card in playArea)
         {
-            UpdateResultText("No valid hand detected.");
+            playedCards.Add(card.gameObject);
+        }
+
+        foreach (Transform card in playerHand)
+        {
+            unplayedCards.Add(card.gameObject);
         }
     }
 
     /// <summary>
-    /// Actualiza el texto en la UI para mostrar los resultados.
+    /// Executes the scoring sequence in order.
     /// </summary>
-    /// <param name="message">El mensaje a mostrar en la UI.</param>
-    private void UpdateResultText(string message)
+    private IEnumerator ScoreSequence()
     {
-        if (resultText != null)
+        Debug.Log("PokerScoreManager: Activating played cards...");
+        yield return StartCoroutine(ActivatePlayedCards());
+
+        Debug.Log("PokerScoreManager: Activating held cards...");
+        yield return StartCoroutine(ActivateHeldCards());
+
+        Debug.Log("PokerScoreManager: Activating independent Jokers...");
+        yield return StartCoroutine(ActivateIndependentJokers());
+
+        DisplayFinalScore();
+    }
+
+    /// <summary>
+    /// Activates effects for played cards in order.
+    /// </summary>
+    private IEnumerator ActivatePlayedCards()
+    {
+        foreach (GameObject card in playedCards)
         {
-            resultText.text = message;
-        }
-        else
-        {
-            Debug.LogWarning("ResultText reference is missing. Cannot display results.");
+            CardAssignment cardData = card.GetComponent<CardAssignment>();
+            if (cardData != null)
+            {
+                Card assignedCard = cardData.GetAssignedCard(); // Obtener la carta asignada
+                if (assignedCard != null)
+                {
+                    baseScore += assignedCard.BaseScore;
+                    Debug.Log($"PokerScoreManager: Played Card Activated: {assignedCard.rank} of {assignedCard.suit} | Base Score: {assignedCard.BaseScore}");
+                }
+                else
+                {
+                    Debug.LogWarning($"PokerScoreManager: Played card {card.name} does not have an assigned Card ScriptableObject.");
+                }
+            }
+
+            yield return new WaitForSeconds(0.5f);
         }
     }
 
     /// <summary>
-    /// Obtiene las cartas actualmente highlightedeadas en PlayerHand.
+    /// Activates effects of cards still in hand if they have special effects.
     /// </summary>
-    /// <returns>Lista de cartas highlightedeadas.</returns>
-    private List<Card> GetHighlightedCards()
+    private IEnumerator ActivateHeldCards()
     {
-        List<Card> highlightedCards = new List<Card>();
-
-        foreach (Transform cardTransform in playerHand)
+        foreach (GameObject card in unplayedCards)
         {
-            CardHighlight cardHighlight = cardTransform.GetComponent<CardHighlight>();
-            if (cardHighlight != null && cardHighlight.IsHighlighted)
-            {
-                CardAssignment cardAssignment = cardTransform.GetComponent<CardAssignment>();
-                if (cardAssignment != null && cardAssignment.GetAssignedCard() != null)
-                {
-                    highlightedCards.Add(cardAssignment.GetAssignedCard());
-                }
-            }
+            Debug.Log($"PokerScoreManager: Checking effects for unplayed card {card.name}");
+
+            yield return new WaitForSeconds(0.5f);
+        }
+    }
+
+    /// <summary>
+    /// Activates Jokers that apply after everything else.
+    /// </summary>
+    private IEnumerator ActivateIndependentJokers()
+    {
+        Debug.Log("PokerScoreManager: Applying independent Joker effects...");
+
+        yield return new WaitForSeconds(0.5f);
+    }
+
+    /// <summary>
+    /// Displays the final score in the UI.
+    /// </summary>
+    private void DisplayFinalScore()
+    {
+        int finalScore = baseScore * multiplier;
+        if (scoreText != null)
+        {
+            scoreText.text = $"Final Score: {finalScore}";
         }
 
-        return highlightedCards;
+        Debug.Log($"PokerScoreManager: Final Score Calculated: {finalScore}");
+    }
+
+    /// <summary>
+    /// Actualiza el texto en pantalla con la información de la mano jugada.
+    /// </summary>
+    private void UpdateScoreText(PokerHandType bestHand, int baseScore, int finalScore)
+    {
+        if (scoreText != null)
+        {
+            scoreText.text = $"{bestHand.handName} lvl. {bestHand.currentLevel}\n" +
+                             $"{baseScore} x {bestHand.multiplier} = {finalScore}";
+        }
+        else
+        {
+            Debug.LogError("ScoreText is not assigned in PokerScoreManager.");
+        }
     }
 }

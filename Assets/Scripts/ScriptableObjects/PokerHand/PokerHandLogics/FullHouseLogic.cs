@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Linq;
+using System.Collections.Generic;
 
 [CreateAssetMenu(fileName = "FullHouseLogic", menuName = "Poker/Logic/Full House")]
 public class FullHouseLogic : PokerHandLogic
@@ -21,33 +22,39 @@ public class FullHouseLogic : PokerHandLogic
         return hasThreeOfAKind && hasPair;
     }
 
-    public override int CalculateScore(Card[] cards, PokerHandType pokerHandType)
+    public override int GetBaseScore(Card[] cards, PokerHandType pokerHandType)
     {
         if (!IsValid(cards)) return 0;
 
-        // Agrupar cartas por su rango (Rank)
-        var rankGroups = cards
+        // Solo devuelve el Base Score desde el ScriptableObject
+        return pokerHandType.GetTotalScore();
+    }
+
+    public override int GetMultiplier(Card[] cards, PokerHandType pokerHandType)
+    {
+        if (!IsValid(cards)) return 1; // Evita multiplicar por 0
+
+        return pokerHandType.GetTotalMultiplier();
+    }
+
+    /// <summary>
+    /// Devuelve solo las cartas que forman parte del Full House (3 del mismo rango y 2 del mismo rango).
+    /// </summary>
+    public override List<Card> GetValidCardsForHand(List<Card> playedCards)
+    {
+        var rankGroups = playedCards
             .GroupBy(card => card.rank)
             .OrderByDescending(group => group.Count())
-            .ThenByDescending(group => (int)group.Key) // Desempatar por rango más alto
+            .ThenByDescending(group => (int)group.Key)
             .ToList();
 
-        // Obtener el grupo de Three of a Kind
-        var threeOfAKindGroup = rankGroups.First(group => group.Count() >= 3);
+        var threeOfAKindGroup = rankGroups.FirstOrDefault(group => group.Count() >= 3);
+        var pairGroup = rankGroups.FirstOrDefault(group => group.Count() >= 2 && group.Key != threeOfAKindGroup?.Key);
 
-        // Obtener el grupo de Pair (ignorando el grupo de Three of a Kind)
-        var pairGroup = rankGroups.First(group => group.Count() >= 2 && group.Key != threeOfAKindGroup.Key);
+        List<Card> validCards = new List<Card>();
+        if (threeOfAKindGroup != null) validCards.AddRange(threeOfAKindGroup.Take(3));
+        if (pairGroup != null) validCards.AddRange(pairGroup.Take(2));
 
-        // Obtener la carta más alta del Three of a Kind y del Pair
-        var highestThreeOfAKind = threeOfAKindGroup.First();
-        var highestPair = pairGroup.First();
-
-        // Usar la configuración del ScriptableObject para calcular el puntaje
-        int totalScore = pokerHandType.GetTotalScore();
-        int totalMultiplier = pokerHandType.GetTotalMultiplier();
-
-        Debug.Log($"Full House Detected: {highestThreeOfAKind.rank}s over {highestPair.rank}s");
-
-        return totalScore * totalMultiplier;
+        return validCards;
     }
 }

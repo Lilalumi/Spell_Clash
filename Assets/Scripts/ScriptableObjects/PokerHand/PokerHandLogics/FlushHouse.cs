@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Collections.Generic; // ✅ Agregado para List<T>
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "FlushHouseLogic", menuName = "Poker/Logic/Flush House")]
@@ -31,38 +32,51 @@ public class FlushHouseLogic : PokerHandLogic
         return hasThreeOfAKind && hasPair; // Es válido si ambas condiciones se cumplen
     }
 
-    public override int CalculateScore(Card[] cards, PokerHandType pokerHandType)
+    /// <summary>
+    /// Retorna el **Base Score** sin multiplicar, solo el valor de la combinación en sí.
+    /// </summary>
+    public override int GetBaseScore(Card[] cards, PokerHandType pokerHandType)
     {
         if (!IsValid(cards)) return 0;
+        return pokerHandType.GetTotalScore(); // Solo el puntaje base
+    }
 
-        // Obtener las cartas del mismo palo
-        var flushCards = cards
+    /// <summary>
+    /// Retorna el **Multiplicador** sin aplicar el puntaje base.
+    /// </summary>
+    public override int GetMultiplier(Card[] cards, PokerHandType pokerHandType)
+    {
+        if (!IsValid(cards)) return 1; // Evita multiplicar por 0
+        return pokerHandType.GetTotalMultiplier(); // Solo el multiplicador
+    }
+
+    /// <summary>
+    /// Obtiene las cartas que forman parte de la combinación válida.
+    /// </summary>
+    public override List<Card> GetValidCardsForHand(List<Card> playedCards)
+    {
+        var flushCards = playedCards
             .GroupBy(card => card.suit)
             .Where(group => group.Count() >= 5)
-            .First()
-            .ToArray();
+            .FirstOrDefault()?.ToList();
 
-        // Agrupar las cartas del flush por su rango
+        if (flushCards == null) return new List<Card>();
+
         var rankGroups = flushCards
             .GroupBy(card => card.rank)
             .ToList();
 
-        // Obtener los grupos relevantes
         var threeOfAKindGroup = rankGroups.FirstOrDefault(group => group.Count() == 3);
         var pairGroup = rankGroups.FirstOrDefault(group => group.Count() == 2);
 
         if (threeOfAKindGroup != null && pairGroup != null)
         {
-            int totalScore = pokerHandType.GetTotalScore();
-            int totalMultiplier = pokerHandType.GetTotalMultiplier();
-
-            Debug.Log($"Flush House Detected: " +
-                      $"Three of a Kind - {threeOfAKindGroup.Key}, " +
-                      $"Pair - {pairGroup.Key}, " +
-                      $"Suit - {flushCards[0].suit}");
-            return totalScore * totalMultiplier;
+            List<Card> scoringCards = new List<Card>(); // ✅ Lista inicializada correctamente
+            scoringCards.AddRange(threeOfAKindGroup.ToList());
+            scoringCards.AddRange(pairGroup.ToList());
+            return scoringCards;
         }
 
-        return 0;
+        return new List<Card>();
     }
 }

@@ -17,5 +17,5 @@ MonoBehaviour:
   multiplier: 3
   baseScoreIncrementPerLevel: 20
   multiplierIncrementPerLevel: 5
-  currentLevel: 3
+  currentLevel: 1
   logic: {fileID: 11400000, guid: 61fb29642565e2443bcda18c248ea3cc, type: 2}

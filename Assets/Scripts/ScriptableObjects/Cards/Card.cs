@@ -33,7 +33,8 @@ public class Card : ScriptableObject
     [Tooltip("Base score of the card, automatically set based on rank.")]
     [ReadOnly]
     [SerializeField]
-    private int baseScore;
+    public int baseScore;
+    public int GetBaseScore() { return baseScore; }
 
     public int BaseScore => baseScore; // Getter público para acceder al baseScore.
 

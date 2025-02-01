@@ -1,28 +1,35 @@
 using UnityEngine;
 using System.Linq;
+using System.Collections.Generic; // 🔹 Importa List<T>
 
 [CreateAssetMenu(fileName = "HighCardLogic", menuName = "Poker/Logic/HighCard")]
 public class HighCardLogic : PokerHandLogic
 {
     public override bool IsValid(Card[] cards)
     {
-        // La "High Card" siempre es válida si hay al menos una carta
         return cards.Length > 0;
     }
 
-    public override int CalculateScore(Card[] cards, PokerHandType pokerHandType)
+    public override int GetBaseScore(Card[] cards, PokerHandType pokerHandType)
     {
         if (!IsValid(cards)) return 0;
+        return pokerHandType.GetTotalScore();
+    }
 
-        // Obtener la carta con el rango más alto
-        var highCard = cards.OrderByDescending(card => (int)card.rank).FirstOrDefault();
+    public override int GetMultiplier(Card[] cards, PokerHandType pokerHandType)
+    {
+        if (!IsValid(cards)) return 1;
+        return pokerHandType.GetTotalMultiplier();
+    }
 
-        // Usa la configuración de la mano para calcular el puntaje total
-        int totalScore = pokerHandType.GetTotalScore();
-        int totalMultiplier = pokerHandType.GetTotalMultiplier();
-
-        Debug.Log($"High Card Detected: {highCard.rank} of {highCard.suit}");
-
-        return totalScore * totalMultiplier;
+    /// <summary>
+    /// Devuelve solo la carta con el rango más alto.
+    /// </summary>
+    public override List<Card> GetValidCardsForHand(List<Card> playedCards)
+    {
+        return playedCards
+            .OrderByDescending(card => (int)card.rank)
+            .Take(1)
+            .ToList();
     }
 }

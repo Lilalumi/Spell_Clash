@@ -34,37 +34,18 @@ public class StraightFlushLogic : PokerHandLogic
         return false;
     }
 
-    public override int CalculateScore(Card[] cards, PokerHandType pokerHandType)
+    public override int GetBaseScore(Card[] cards, PokerHandType pokerHandType)
     {
         if (!IsValid(cards)) return 0;
 
-        // Agrupar cartas por su palo (Suit)
-        var suitGroups = cards
-            .GroupBy(card => card.suit)
-            .Where(group => group.Count() >= 5) // Solo grupos con al menos 5 cartas
-            .ToList();
+        return pokerHandType.GetTotalScore(); // Solo devuelve la base
+    }
 
-        foreach (var group in suitGroups)
-        {
-            // Ordenar las cartas del grupo por rango
-            var orderedRanks = group
-                .Select(card => (int)card.rank)
-                .OrderBy(rank => rank)
-                .Distinct()
-                .ToList();
+    public override int GetMultiplier(Card[] cards, PokerHandType pokerHandType)
+    {
+        if (!IsValid(cards)) return 1; // Evita multiplicar por 0
 
-            // Verificar si hay una secuencia de 5 números consecutivos
-            if (HasStraight(orderedRanks))
-            {
-                int totalScore = pokerHandType.GetTotalScore();
-                int totalMultiplier = pokerHandType.GetTotalMultiplier();
-
-                Debug.Log($"Straight Flush Detected: {group.Key} suit");
-                return totalScore * totalMultiplier;
-            }
-        }
-
-        return 0;
+        return pokerHandType.GetTotalMultiplier(); // Solo devuelve el multiplicador
     }
 
     /// <summary>
@@ -87,5 +68,32 @@ public class StraightFlushLogic : PokerHandLogic
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Devuelve solo las cartas que forman parte del Straight Flush válido.
+    /// </summary>
+    public override List<Card> GetValidCardsForHand(List<Card> playedCards)
+    {
+        var suitGroups = playedCards
+            .GroupBy(card => card.suit)
+            .Where(group => group.Count() >= 5) // Solo grupos con al menos 5 cartas
+            .ToList();
+
+        foreach (var group in suitGroups)
+        {
+            var orderedRanks = group
+                .Select(card => (int)card.rank)
+                .OrderBy(rank => rank)
+                .Distinct()
+                .ToList();
+
+            if (HasStraight(orderedRanks))
+            {
+                return group.OrderBy(card => card.rank).Take(5).ToList(); // Devuelve solo las 5 cartas del Straight Flush
+            }
+        }
+
+        return new List<Card>();
     }
 }
