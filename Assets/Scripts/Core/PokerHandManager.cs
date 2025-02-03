@@ -41,7 +41,7 @@ public class PokerHandManager : MonoBehaviour
 
     /// <summary>
     /// Evalúa la mejor mano posible con las cartas actualmente en PlayArea.
-        /// </summary>
+    /// </summary>
     public (int baseScore, PokerHandType bestHand, List<Card> scoringCards) EvaluateHand()
     {
         List<Card> playedCards = GetPlayedCards();
@@ -81,7 +81,6 @@ public class PokerHandManager : MonoBehaviour
         return (0, null, new List<Card>());
     }
 
-
     /// <summary>
     /// Se activa al presionar el botón de "PLAY HAND".
     /// Mueve las cartas seleccionadas a la PlayArea y evalúa la mano.
@@ -119,13 +118,13 @@ public class PokerHandManager : MonoBehaviour
 
             if (scoreManager != null)
             {
-                scoreManager.StartScoring(bestHand); // Pasa solo el tipo de mano, no los valores individuales
+                // Se envían ambos argumentos: bestHand y scoringCards
+                scoreManager.StartScoring(bestHand, scoringCards);
             }
             else
             {
                 Debug.LogError("PokerScoreManager not found in PlayArea!");
             }
-
         }
         else
         {
@@ -183,7 +182,8 @@ public class PokerHandManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Reorganiza las cartas en PlayArea después de jugarlas.
+    /// Reorganiza las cartas en PlayArea, aplicando el espaciado sin modificar su orden actual.
+    /// Se utiliza el sibling index de cada carta para determinar su posición.
     /// </summary>
     private void RedistributeCardsInPlayArea()
     {
@@ -192,14 +192,18 @@ public class PokerHandManager : MonoBehaviour
         int cardCount = playArea.childCount;
         if (cardCount == 0) return;
 
+        // Calcula la posición inicial para centrar las cartas en PlayArea
         Vector3 startPosition = playArea.position - new Vector3((cardCount - 1) * playAreaSpacing / 2, 0, 0);
 
+        // Recorremos los hijos en el orden actual (ya establecido al mover desde PlayerHand)
         for (int i = 0; i < cardCount; i++)
         {
             Transform cardTransform = playArea.GetChild(i);
+            // La posición objetivo se calcula en base al índice actual sin cambiar el orden
             Vector3 targetPosition = startPosition + new Vector3(i * playAreaSpacing, 0, 0);
-
-            LeanTween.move(cardTransform.gameObject, targetPosition, 0.3f).setEase(LeanTweenType.easeInOutQuad);
+            LeanTween.move(cardTransform.gameObject, targetPosition, 0.3f)
+                    .setEase(LeanTweenType.easeInOutQuad);
         }
     }
+
 }

@@ -1,285 +1,231 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using TMPro;
 
 public class PokerScoreManager : MonoBehaviour
 {
-    [Header("Score Display")]
-    [Tooltip("UI Text to display the final score.")]
-    [SerializeField] private TextMeshProUGUI scoreText;
-    [SerializeField] private TextMeshProUGUI totalScoreText; // 🔹 Nuevo TMP UI para el puntaje total
+    [Header("UI Elements")]
+    [Tooltip("Muestra el nombre de la mano y su nivel.")]
+    [SerializeField] private TextMeshProUGUI handNameAndLevelText;
+    [Tooltip("Muestra el valor de BASE en tiempo real.")]
+    [SerializeField] private TextMeshProUGUI baseText;
+    [Tooltip("Muestra el valor de MULTI en tiempo real.")]
+    [SerializeField] private TextMeshProUGUI multiText;
+    [Tooltip("Muestra el puntaje total acumulado de todas las manos jugadas.")]
+    [SerializeField] private TextMeshProUGUI totalScoreText;
 
-
-    [Header("Hand References")]
-    [Tooltip("The Play Area where played cards are moved.")]
+    [Header("Area References")]
+    [Tooltip("Zona de juego donde se puntúan las cartas.")]
     [SerializeField] private Transform playArea;
+    [Tooltip("Zona de descarte.")]
     [SerializeField] private Transform discardArea;
-    [SerializeField] private HandManager handManager;
-    [Tooltip("The Player Hand where unplayed cards remain.")]
+    [Tooltip("Zona de la mano del jugador.")]
     [SerializeField] private Transform playerHand;
-    
-    [Header("Timing Settings")]
-    [Tooltip("Time in seconds before moving the hand to discard.")]
-    [SerializeField] private float displayDuration = 2.0f;
 
-    [Header("Card Positioning")]
-    [Tooltip("Spacing between cards in PlayArea.")]
-    [SerializeField] private float playAreaSpacing = 0.5f;
-
-    [Tooltip("Height offset for scoring cards.")]
+    [Header("Animation Settings")]
+    [Tooltip("Duración de la animación al mover cartas a PlayArea.")]
+    [SerializeField] private float moveToPlayAreaDuration = 0.5f;
+    [Tooltip("Retraso entre el movimiento de cada carta.")]
+    [SerializeField] private float cardDelay = 0.1f;
+    [Tooltip("Desplazamiento en Y para elevar las cartas de puntaje.")]
     [SerializeField] private float scoringCardYOffset = 0.5f;
+    [Tooltip("Duración de la animación de elevación.")]
+    [SerializeField] private float elevateDuration = 0.3f;
+    [Tooltip("Tiempo de espera entre activaciones de carta.")]
+    [SerializeField] private float scoringEffectDelay = 0.3f;
+    [Tooltip("Duración de la animación de descarte.")]
+    [SerializeField] private float discardDuration = 0.5f;
 
-    [Tooltip("Offset when cards disappear to discard.")]
-    [SerializeField] private float discardOffsetX = 0.3f;
-    
-    private List<GameObject> playedCards = new List<GameObject>();
-    private List<GameObject> unplayedCards = new List<GameObject>();
-    private int baseScore = 0;
-    private int multiplier = 1;
-    private List<GameObject> scoringCards = new List<GameObject>(); // Cartas que suman puntos
-    private int totalGameScore = 0; // 🔹 Puntaje total de la partida
+    [Header("References")]
+    [Tooltip("Referencia al HandManager para robar nuevas cartas.")]
+    [SerializeField] private HandManager handManager;
 
+    // Variables para acumular puntaje de la mano actual
+    private int currentBaseScore = 0;
+    private int currentMultiplier = 1;
+
+    // Puntaje total de todas las manos jugadas
+    private int totalGameScore = 0;
 
     /// <summary>
-    /// Inicia la secuencia de puntuación basada en la mejor mano detectada.
+    /// Inicia la secuencia de puntuación.
+    /// Se le pasan:
+    /// - bestHand: el tipo de mano detectado (con nombre y nivel).
+    /// - scoringCards: las cartas que se toman en cuenta para puntuar.
     /// </summary>
-    public void StartScoring(PokerHandType bestHand)
+    public void StartScoring(PokerHandType bestHand, List<Card> scoringCards)
     {
-        if (bestHand == null)
+        // Establecer el piso inicial según bestHand
+        currentBaseScore = bestHand.GetTotalScore();
+        currentMultiplier = bestHand.GetTotalMultiplier();
+        UpdateBaseAndMultiUI();
+
+        // Actualizar el texto de mano y nivel
+        if (handNameAndLevelText != null)
         {
-            Debug.LogError("No valid poker hand detected. Cannot start scoring.");
-            return;
+            handNameAndLevelText.text = $"{bestHand.handName} lvl. {bestHand.currentLevel}";
         }
 
-        // 🔹 Obtener TODAS las cartas jugadas en PlayArea
-        List<GameObject> playedCards = new List<GameObject>();
-        foreach (Transform card in playArea)
-        {
-            playedCards.Add(card.gameObject);
-        }
+        // Iniciar la secuencia de puntuación
+        StartCoroutine(ScoringSequence(bestHand, scoringCards));
+    }
 
-        Debug.Log($"[PokerScoreManager] - Total cards in PlayArea: {playedCards.Count}");
+    /// <summary>
+    /// Secuencia principal:
+    /// 1. Mover cartas resaltadas de PlayerHand a PlayArea.
+    /// 2. Elevar las cartas de puntaje.
+    /// 3. Activar efectos de cartas (actualizan BASE y MULTI).
+    /// 4. Calcular puntaje final y actualizar la UI.
+    /// 5. Esperar 1 segundo, descartar cartas y robar nuevas.
+    /// </summary>
+    private IEnumerator ScoringSequence(PokerHandType bestHand, List<Card> scoringCards)
+    {
+        // Paso 1: Mover cartas resaltadas a PlayArea
+        yield return StartCoroutine(MovePlayerHandToPlayArea());
 
-        // 🔹 Obtener SOLO las cartas que forman la combinación válida
-        List<Card> validCards = bestHand.logic.GetValidCardsForHand(
-            playedCards.Select(c => c.GetComponent<CardAssignment>().GetAssignedCard()).ToList()
-        );
+        // Paso 2: Elevar las cartas que cuentan para el puntaje
+        yield return StartCoroutine(ElevateScoringCards(scoringCards));
 
-        Debug.Log($"[PokerScoreManager] - Scoring cards count: {validCards.Count}");
+        // Paso 3: Activar efectos (cada carta actualiza BASE y MULTI)
+        yield return StartCoroutine(ActivateCardEffects(scoringCards));
 
-        // 🔹 Obtener el puntaje base de la mano
-        int totalBaseScore = bestHand.GetTotalScore();
-        Debug.Log($"[PokerScoreManager] - Base Score from Hand: {totalBaseScore}");
+        // Paso 4: Calcular y mostrar el puntaje final
+        int finalScore = currentBaseScore * currentMultiplier;
+        UpdateFinalScoreUI(finalScore, bestHand);
 
-        // 🔹 Sumar los puntajes individuales de cada carta
-        foreach (Card card in validCards)
-        {
-            totalBaseScore += card.baseScore;
-            Debug.Log($"[PokerScoreManager] - Added {card.rank} of {card.suit} -> Base Score: {card.baseScore} | New Total: {totalBaseScore}");
-        }
-
-        // 🔹 Aplicar el multiplicador FINALMENTE
-        int finalScore = totalBaseScore * bestHand.GetTotalMultiplier();
-        Debug.Log($"[PokerScoreManager] - Final Score Calculation: ({totalBaseScore} * {bestHand.GetTotalMultiplier()}) = {finalScore}");
-
-        // 🔹 Actualizar la UI con el puntaje correcto
-        scoreText.text = $"{bestHand.handName} lvl. {bestHand.currentLevel}\n" +
-                        $"{totalBaseScore} x {bestHand.GetTotalMultiplier()} = {finalScore}";
-
-        // 🔹 Agregar el puntaje final al puntaje total de la partida
+        // Acumular puntaje total y actualizar el UI TotalScore
         totalGameScore += finalScore;
         UpdateTotalScoreUI();
 
-        // 🔹 Primero, mover TODAS las cartas a su posición en PlayArea
-        StartCoroutine(MoveCardsToPlayArea(playedCards, validCards));
+        // Esperar 1 segundo antes de descartar
+        yield return new WaitForSeconds(1f);
+
+        // Paso 5: Descartar las cartas y reemplazarlas
+        yield return StartCoroutine(DiscardAndReplaceCards());
     }
 
     /// <summary>
-    /// Identifies which cards are played and which remain in hand.
+    /// Mueve las cartas resaltadas de PlayerHand a PlayArea.
     /// </summary>
-    private void IdentifyPlayedAndUnplayedCards()
+    private IEnumerator MovePlayerHandToPlayArea()
     {
-        foreach (Transform card in playArea)
-        {
-            playedCards.Add(card.gameObject);
-        }
+        // Crear una lista de Transform en el mismo orden en que aparecen en PlayerHand
+        List<Transform> cardsToMove = new List<Transform>();
 
         foreach (Transform card in playerHand)
         {
-            unplayedCards.Add(card.gameObject);
-        }
-    }
-
-    /// <summary>
-    /// Executes the scoring sequence in order.
-    /// </summary>
-    private IEnumerator ScoreSequence()
-    {
-        Debug.Log("PokerScoreManager: Activating played cards...");
-        yield return StartCoroutine(ActivatePlayedCards());
-
-        Debug.Log("PokerScoreManager: Activating held cards...");
-        yield return StartCoroutine(ActivateHeldCards());
-
-        Debug.Log("PokerScoreManager: Activating independent Jokers...");
-        yield return StartCoroutine(ActivateIndependentJokers());
-
-        DisplayFinalScore();
-    }
-
-    /// <summary>
-    /// Activates effects for played cards in order.
-    /// </summary>
-    private IEnumerator ActivatePlayedCards()
-    {
-        foreach (GameObject card in playedCards)
-        {
-            CardAssignment cardData = card.GetComponent<CardAssignment>();
-            if (cardData != null)
+            CardHighlight cardHighlight = card.GetComponent<CardHighlight>();
+            if (cardHighlight != null && cardHighlight.IsHighlighted)
             {
-                Card assignedCard = cardData.GetAssignedCard(); // Obtener la carta asignada
-                if (assignedCard != null)
+                cardsToMove.Add(card);
+            }
+        }
+
+        // Recorremos la lista en orden y movemos cada carta a PlayArea manteniendo su posición en la secuencia.
+        for (int i = 0; i < cardsToMove.Count; i++)
+        {
+            Transform card = cardsToMove[i];
+            // Cambiar el padre a PlayArea
+            card.SetParent(playArea, true);
+            // Asignar el mismo índice para conservar el orden
+            card.SetSiblingIndex(i);
+            // Animar el movimiento
+            LeanTween.move(card.gameObject, playArea.position, moveToPlayAreaDuration)
+                    .setEase(LeanTweenType.easeInOutQuad);
+            yield return new WaitForSeconds(cardDelay);
+        }
+
+        yield return new WaitForSeconds(moveToPlayAreaDuration);
+    }
+
+
+    /// <summary>
+    /// Eleva en Y las cartas en PlayArea que se usan para puntuar.
+    /// </summary>
+    private IEnumerator ElevateScoringCards(List<Card> scoringCards)
+    {
+        foreach (Transform card in playArea)
+        {
+            CardAssignment assignment = card.GetComponent<CardAssignment>();
+            if (assignment != null)
+            {
+                Card cardData = assignment.GetAssignedCard();
+                if (scoringCards.Contains(cardData))
                 {
-                    baseScore += assignedCard.BaseScore;
-                    Debug.Log($"PokerScoreManager: Played Card Activated: {assignedCard.rank} of {assignedCard.suit} | Base Score: {assignedCard.BaseScore}");
-                }
-                else
-                {
-                    Debug.LogWarning($"PokerScoreManager: Played card {card.name} does not have an assigned Card ScriptableObject.");
+                    Vector3 targetPos = card.position + new Vector3(0, scoringCardYOffset, 0);
+                    LeanTween.move(card.gameObject, targetPos, elevateDuration)
+                             .setEase(LeanTweenType.easeInOutQuad);
+                    yield return new WaitForSeconds(cardDelay);
                 }
             }
-
-            yield return new WaitForSeconds(0.5f);
         }
+        yield return new WaitForSeconds(elevateDuration);
     }
 
     /// <summary>
-    /// Activates effects of cards still in hand if they have special effects.
+    /// Activa los efectos de las cartas de puntaje, actualizando BASE y MULTI.
     /// </summary>
-    private IEnumerator ActivateHeldCards()
+    private IEnumerator ActivateCardEffects(List<Card> scoringCards)
     {
-        foreach (GameObject card in unplayedCards)
+        foreach (Transform card in playArea)
         {
-            Debug.Log($"PokerScoreManager: Checking effects for unplayed card {card.name}");
-
-            yield return new WaitForSeconds(0.5f);
-        }
-    }
-
-    /// <summary>
-    /// Activates Jokers that apply after everything else.
-    /// </summary>
-    private IEnumerator ActivateIndependentJokers()
-    {
-        Debug.Log("PokerScoreManager: Applying independent Joker effects...");
-
-        yield return new WaitForSeconds(0.5f);
-    }
-
-    /// <summary>
-    /// Displays the final score in the UI.
-    /// </summary>
-    private void DisplayFinalScore()
-    {
-        int finalScore = baseScore * multiplier;
-        if (scoreText != null)
-        {
-            scoreText.text = $"Final Score: {finalScore}";
-        }
-
-        Debug.Log($"PokerScoreManager: Final Score Calculated: {finalScore}");
-    }
-
-    /// <summary>
-    /// Actualiza el texto en pantalla con la información de la mano jugada.
-    /// </summary>
-    private void UpdateScoreText(PokerHandType bestHand, int baseScore, int finalScore)
-    {
-        if (scoreText != null)
-        {
-            scoreText.text = $"{bestHand.handName} lvl. {bestHand.currentLevel}\n" +
-                             $"{baseScore} x {bestHand.multiplier} = {finalScore}";
-        }
-        else
-        {
-            Debug.LogError("ScoreText is not assigned in PokerScoreManager.");
-        }
-    }
-
-    private IEnumerator MoveCardsToPlayArea(List<GameObject> playedCards, List<Card> scoringCards)
-    {
-        Debug.Log("[PokerScoreManager] - Moving cards to PlayArea...");
-
-        Vector3 startPos = playArea.position - new Vector3((playedCards.Count - 1) * playAreaSpacing / 2, 0, 0);
-
-        for (int i = 0; i < playedCards.Count; i++)
-        {
-            GameObject cardObject = playedCards[i];
-            Vector3 targetPosition = startPos + new Vector3(i * playAreaSpacing, 0, 0);
-
-            LeanTween.move(cardObject, targetPosition, 0.5f).setEase(LeanTweenType.easeInOutQuad);
-        }
-
-        yield return new WaitForSeconds(0.6f); // Esperar a que termine el movimiento
-
-        // 🔹 Ahora, elevar solo las cartas que cuentan para el puntaje
-        AdjustScoringCardPositions(playedCards, scoringCards);
-
-        yield return new WaitForSeconds(displayDuration);
-
-        // 🔹 Después de la espera, descartar las cartas y reponer nuevas
-        StartCoroutine(WaitBeforeDiscarding(playedCards));
-    }
-
-    private void AdjustScoringCardPositions(List<GameObject> playedCards, List<Card> scoringCards)
-    {
-        foreach (GameObject cardObject in playedCards)
-        {
-            CardAssignment cardData = cardObject.GetComponent<CardAssignment>();
-            if (cardData == null) continue;
-
-            bool isScoringCard = scoringCards.Contains(cardData.GetAssignedCard());
-
-            Vector3 targetPosition = cardObject.transform.position;
-            if (isScoringCard)
+            CardAssignment assignment = card.GetComponent<CardAssignment>();
+            if (assignment != null)
             {
-                targetPosition.y += scoringCardYOffset;
-            }
-
-            LeanTween.move(cardObject, targetPosition, 0.3f).setEase(LeanTweenType.easeInOutQuad);
-        }
-    }
-
-    private IEnumerator WaitBeforeDiscarding(List<GameObject> playedCards)
-    {
-        Debug.Log($"[PokerScoreManager] - Moving {playedCards.Count} cards to discard.");
-
-        foreach (GameObject card in playedCards)
-        {
-            Vector3 discardTarget = discardArea.position + new Vector3(discardOffsetX, 0, 0);
-            LeanTween.move(card, discardTarget, 0.5f)
-                .setEase(LeanTweenType.easeInOutQuad)
-                .setOnComplete(() =>
+                Card cardData = assignment.GetAssignedCard();
+                if (scoringCards.Contains(cardData))
                 {
-                    card.transform.SetParent(discardArea, true);
-                    card.SetActive(false);
-                });
-        }
+                    // Efecto visual: escalado breve
+                    LeanTween.scale(card.gameObject, card.localScale * 1.2f, scoringEffectDelay / 2)
+                             .setLoopPingPong(1);
 
-        yield return new WaitForSeconds(0.6f);
+                    // Actualizar BASE con el valor de la carta
+                    currentBaseScore += cardData.BaseScore;
 
-        if (handManager != null)
-        {
-            StartCoroutine(handManager.DrawMultipleCards(playedCards.Count));
+                    // Ejemplo: si la carta es un As, incrementar MULTI
+                    if (cardData.rank == Card.Rank.A)
+                    {
+                        currentMultiplier += 1;
+                    }
+
+                    UpdateBaseAndMultiUI();
+                    yield return new WaitForSeconds(scoringEffectDelay);
+                }
+            }
         }
-        else
+        yield return null;
+    }
+
+    /// <summary>
+    /// Actualiza el texto final con el puntaje y la información de la mano.
+    /// </summary>
+    private void UpdateFinalScoreUI(int finalScore, PokerHandType bestHand)
+    {
+        if (handNameAndLevelText != null)
         {
-            Debug.LogError("HandManager reference is missing in PokerScoreManager.");
+            handNameAndLevelText.text = $"{bestHand.handName} lvl. {bestHand.currentLevel}\nFinal Score: {finalScore}";
         }
     }
 
+    /// <summary>
+    /// Actualiza los textos de BASE y MULTI en la UI.
+    /// </summary>
+    private void UpdateBaseAndMultiUI()
+    {
+        if (baseText != null)
+        {
+            baseText.text = $"BASE: {currentBaseScore}";
+        }
+        if (multiText != null)
+        {
+            multiText.text = $"MULTI: {currentMultiplier}";
+        }
+    }
+
+    /// <summary>
+    /// Actualiza el texto TotalScore con la suma acumulada.
+    /// </summary>
     private void UpdateTotalScoreUI()
     {
         if (totalScoreText != null)
@@ -288,19 +234,22 @@ public class PokerScoreManager : MonoBehaviour
         }
     }
 
-    private void DiscardPlayedHand(List<GameObject> playedCards)
+    /// <summary>
+    /// Descartar las cartas en PlayArea: se mueven al Discard, se desactivan y se roban nuevas cartas.
+    /// </summary>
+    private IEnumerator DiscardAndReplaceCards()
     {
-        if (discardArea == null)
+        List<GameObject> cardsToDiscard = new List<GameObject>();
+
+        foreach (Transform card in playArea)
         {
-            Debug.LogError("Discard area is missing in PokerScoreManager.");
-            return;
+            cardsToDiscard.Add(card.gameObject);
         }
 
-        Debug.Log($"[PokerScoreManager] - Moving {playedCards.Count} cards to discard.");
-
-        foreach (GameObject card in playedCards)
+        // Mover cada carta al Discard y desactivarla
+        foreach (GameObject card in cardsToDiscard)
         {
-            LeanTween.move(card, discardArea.position, 0.5f)
+            LeanTween.move(card, discardArea.position, discardDuration)
                 .setEase(LeanTweenType.easeInOutQuad)
                 .setOnComplete(() =>
                 {
@@ -309,10 +258,12 @@ public class PokerScoreManager : MonoBehaviour
                 });
         }
 
-        // 🔹 Robar nuevas cartas para reponer la mano
+        yield return new WaitForSeconds(discardDuration + 0.1f);
+
+        // Robar la misma cantidad de cartas descartadas
         if (handManager != null)
         {
-            StartCoroutine(handManager.DrawMultipleCards(playedCards.Count));
+            yield return StartCoroutine(handManager.DrawMultipleCards(cardsToDiscard.Count));
         }
         else
         {
@@ -320,4 +271,3 @@ public class PokerScoreManager : MonoBehaviour
         }
     }
 }
-
