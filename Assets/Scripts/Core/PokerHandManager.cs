@@ -30,12 +30,12 @@ public class PokerHandManager : MonoBehaviour
     {
         if (playerHand == null)
         {
-            Debug.LogError("PlayerHand reference is missing in PokerHandManager.");
+            // PlayerHand reference is missing in PokerHandManager.
         }
 
         if (playArea == null)
         {
-            Debug.LogError("PlayArea reference is missing in PokerHandManager.");
+            // PlayArea reference is missing in PokerHandManager.
         }
     }
 
@@ -48,7 +48,6 @@ public class PokerHandManager : MonoBehaviour
 
         if (playedCards.Count == 0)
         {
-            Debug.LogError("No cards detected in PlayArea for scoring.");
             return (0, null, new List<Card>());
         }
 
@@ -73,11 +72,9 @@ public class PokerHandManager : MonoBehaviour
 
         if (bestHand != null)
         {
-            Debug.Log($"Best Hand Detected: {bestHand.handName} | Base Score: {highestBaseScore}");
             return (highestBaseScore, bestHand, scoringCards);
         }
 
-        Debug.LogError("No valid poker hand detected. Cannot start scoring.");
         return (0, null, new List<Card>());
     }
 
@@ -95,6 +92,7 @@ public class PokerHandManager : MonoBehaviour
             return;
         }
 
+        // Remover las cartas de la mano (HandManager) y reparentarlas a PlayArea
         foreach (Transform card in highlightedCards)
         {
             var handManager = playerHand.GetComponent<HandManager>();
@@ -102,13 +100,14 @@ public class PokerHandManager : MonoBehaviour
             {
                 handManager.RemoveCard(card.gameObject);
             }
-
+            // Reparentar la carta a PlayArea para que sea considerada en la evaluación
             card.SetParent(playArea, true);
         }
 
+        // Opcional: Redistribuir las cartas en PlayArea para aplicar el espaciado
         RedistributeCardsInPlayArea();
 
-        // Evaluar la mano con las cartas que ahora están en PlayArea
+        // Evaluar la mano usando las cartas que ahora están en PlayArea
         var (baseScore, bestHand, scoringCards) = EvaluateHand();
 
         if (bestHand != null)
@@ -118,19 +117,16 @@ public class PokerHandManager : MonoBehaviour
 
             if (scoreManager != null)
             {
-                // Se envían ambos argumentos: bestHand y scoringCards
-                scoreManager.StartScoring(bestHand, scoringCards);
-            }
-            else
-            {
-                Debug.LogError("PokerScoreManager not found in PlayArea!");
+                // Se envían los tres argumentos: bestHand, scoringCards y highlightedCards
+                scoreManager.StartScoring(bestHand, scoringCards, highlightedCards);
             }
         }
         else
         {
-            Debug.LogError("No valid poker hand detected after moving cards to PlayArea.");
+            UpdateResultText("No valid poker hand detected after moving cards to PlayArea.");
         }
     }
+
 
     /// <summary>
     /// Obtiene las cartas actualmente en PlayArea.
@@ -192,18 +188,18 @@ public class PokerHandManager : MonoBehaviour
         int cardCount = playArea.childCount;
         if (cardCount == 0) return;
 
-        // Calcula la posición inicial para centrar las cartas en PlayArea
-        Vector3 startPosition = playArea.position - new Vector3((cardCount - 1) * playAreaSpacing / 2, 0, 0);
+        // Calcula la posición local inicial para centrar las cartas
+        Vector3 startLocalPos = new Vector3(-((cardCount - 1) * playAreaSpacing / 2f), 0f, 0f);
 
-        // Recorremos los hijos en el orden actual (ya establecido al mover desde PlayerHand)
+        // Recorremos los hijos en el orden actual
         for (int i = 0; i < cardCount; i++)
         {
             Transform cardTransform = playArea.GetChild(i);
-            // La posición objetivo se calcula en base al índice actual sin cambiar el orden
-            Vector3 targetPosition = startPosition + new Vector3(i * playAreaSpacing, 0, 0);
-            LeanTween.move(cardTransform.gameObject, targetPosition, 0.3f)
+            Vector3 targetLocalPos = startLocalPos + new Vector3(i * playAreaSpacing, 0f, 0f);
+            LeanTween.moveLocal(cardTransform.gameObject, targetLocalPos, 0.3f)
                     .setEase(LeanTweenType.easeInOutQuad);
         }
     }
+
 
 }

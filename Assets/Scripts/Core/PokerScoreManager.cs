@@ -54,7 +54,7 @@ public class PokerScoreManager : MonoBehaviour
     /// - bestHand: el tipo de mano detectado (con nombre y nivel).
     /// - scoringCards: las cartas que se toman en cuenta para puntuar.
     /// </summary>
-    public void StartScoring(PokerHandType bestHand, List<Card> scoringCards)
+    public void StartScoring(PokerHandType bestHand, List<Card> scoringCards, List<Transform> highlightedCards)
     {
         // Establecer el piso inicial según bestHand
         currentBaseScore = bestHand.GetTotalScore();
@@ -68,7 +68,7 @@ public class PokerScoreManager : MonoBehaviour
         }
 
         // Iniciar la secuencia de puntuación
-        StartCoroutine(ScoringSequence(bestHand, scoringCards));
+        StartCoroutine(ScoringSequence(bestHand, scoringCards, highlightedCards));
     }
 
     /// <summary>
@@ -79,10 +79,10 @@ public class PokerScoreManager : MonoBehaviour
     /// 4. Calcular puntaje final y actualizar la UI.
     /// 5. Esperar 1 segundo, descartar cartas y robar nuevas.
     /// </summary>
-    private IEnumerator ScoringSequence(PokerHandType bestHand, List<Card> scoringCards)
+    private IEnumerator ScoringSequence(PokerHandType bestHand, List<Card> scoringCards, List<Transform> highlightedCards)
     {
-        // Paso 1: Mover cartas resaltadas a PlayArea
-        yield return StartCoroutine(MovePlayerHandToPlayArea());
+        // Paso 1: Mover cartas resaltadas a PlayArea, manteniendo el orden original
+        yield return StartCoroutine(MovePlayerHandToPlayArea(highlightedCards));
 
         // Paso 2: Elevar las cartas que cuentan para el puntaje
         yield return StartCoroutine(ElevateScoringCards(scoringCards));
@@ -105,38 +105,25 @@ public class PokerScoreManager : MonoBehaviour
         yield return StartCoroutine(DiscardAndReplaceCards());
     }
 
+
     /// <summary>
     /// Mueve las cartas resaltadas de PlayerHand a PlayArea.
     /// </summary>
-    private IEnumerator MovePlayerHandToPlayArea()
+    private IEnumerator MovePlayerHandToPlayArea(List<Transform> cardsToMove)
     {
-        // Crear una lista de Transform en el mismo orden en que aparecen en PlayerHand
-        List<Transform> cardsToMove = new List<Transform>();
-
-        foreach (Transform card in playerHand)
-        {
-            CardHighlight cardHighlight = card.GetComponent<CardHighlight>();
-            if (cardHighlight != null && cardHighlight.IsHighlighted)
-            {
-                cardsToMove.Add(card);
-            }
-        }
-
-        // Recorremos la lista en orden y movemos cada carta a PlayArea manteniendo su posición en la secuencia.
+        // Recorremos la lista en orden y movemos cada carta a PlayArea, manteniendo ese mismo orden.
         for (int i = 0; i < cardsToMove.Count; i++)
         {
             Transform card = cardsToMove[i];
-            // Cambiar el padre a PlayArea
-            card.SetParent(playArea, true);
+            // Cambiar el padre a PlayArea sin conservar la posición global
+            card.SetParent(playArea, false);
             // Asignar el mismo índice para conservar el orden
             card.SetSiblingIndex(i);
-            // Animar el movimiento
-            LeanTween.move(card.gameObject, playArea.position, moveToPlayAreaDuration)
-                    .setEase(LeanTweenType.easeInOutQuad);
+            // (Opcional) Puedes hacer una animación de fade o similar aquí si lo deseas
             yield return new WaitForSeconds(cardDelay);
         }
 
-        yield return new WaitForSeconds(moveToPlayAreaDuration);
+        yield return null;
     }
 
 

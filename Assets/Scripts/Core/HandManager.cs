@@ -119,10 +119,12 @@ public class HandManager : MonoBehaviour
 
         if (cardObject == null || handCards.Contains(cardObject)) return;
 
-        cardObject.transform.SetParent(transform, true);
+        // Al agregar la carta, se establece su padre en esta mano (PlayerHand)
+        cardObject.transform.SetParent(transform, false);
         handCards.Add(cardObject);
 
         RedistributeCards();
+        UpdateHierarchyOrder();
 
         LeanTween.delayedCall(moveDuration, () =>
         {
@@ -141,6 +143,7 @@ public class HandManager : MonoBehaviour
         handCards.Remove(cardObject);
         highlightedCards.Remove(cardObject); // Asegura que no se sigan contando
         RedistributeCards();
+        UpdateHierarchyOrder();
     }
     
     public void RedistributeCards()
@@ -170,6 +173,18 @@ public class HandManager : MonoBehaviour
             }
 
             LeanTween.move(cardObject, targetPosition, moveDuration).setEase(LeanTweenType.easeInOutQuad);
+        }
+    }
+
+    /// <summary>
+    /// Actualiza el orden en la jerarquía de PlayerHand para que el orden de las cartas (de izquierda a derecha) 
+    /// se refleje en el orden de los hijos (de arriba a abajo).
+    /// </summary>
+    private void UpdateHierarchyOrder()
+    {
+        for (int i = 0; i < handCards.Count; i++)
+        {
+            handCards[i].transform.SetSiblingIndex(i);
         }
     }
 
@@ -246,6 +261,7 @@ public class HandManager : MonoBehaviour
         handCards.Insert(targetIndex, card);
 
         RedistributeCards();
+        UpdateHierarchyOrder();
     }
 
     public void SortHandByRank()
@@ -259,6 +275,7 @@ public class HandManager : MonoBehaviour
             return cardA.rank.CompareTo(cardB.rank);
         });
         RedistributeCards();
+        UpdateHierarchyOrder();
     }
 
     public void SortHandBySuit()
@@ -272,6 +289,7 @@ public class HandManager : MonoBehaviour
             return cardA.suit.CompareTo(cardB.suit);
         });
         RedistributeCards();
+        UpdateHierarchyOrder();
     }
 
     /// <summary>
@@ -281,7 +299,6 @@ public class HandManager : MonoBehaviour
     {
         if (discardAmount <= 0)
         {
-            
             return;
         }
 
@@ -293,7 +310,6 @@ public class HandManager : MonoBehaviour
 
         if (toDiscard.Count == 0)
         {
-            
             return;
         }
 
@@ -315,6 +331,7 @@ public class HandManager : MonoBehaviour
 
         StartCoroutine(DrawMultipleCards(toDiscard.Count));
         RedistributeCards();
+        UpdateHierarchyOrder();
     }
 
     /// <summary>
