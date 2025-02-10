@@ -165,12 +165,12 @@ public class PokerScoreManager : MonoBehaviour
                 {
                     // Efecto visual: escalado breve
                     LeanTween.scale(card.gameObject, card.localScale * 1.2f, scoringEffectDelay / 2)
-                             .setLoopPingPong(1);
+                            .setLoopPingPong(1);
 
-                    // Actualizar BASE con el valor de la carta
-                    currentBaseScore += cardData.BaseScore;
+                    // Actualizar BASE usando el puntaje final de la carta, que incluye los efectos de los stickers.
+                    currentBaseScore += cardData.GetFinalScore();
 
-                    // Ejemplo: si la carta es un As, incrementar MULTI
+                    // Ejemplo: si la carta es un As, incrementar MULTI.
                     if (cardData.rank == Card.Rank.A)
                     {
                         currentMultiplier += 1;
@@ -183,6 +183,7 @@ public class PokerScoreManager : MonoBehaviour
         }
         yield return null;
     }
+
 
     /// <summary>
     /// Actualiza el texto final con el puntaje y la información de la mano.

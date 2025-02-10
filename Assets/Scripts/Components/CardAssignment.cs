@@ -92,7 +92,8 @@ public class CardAssignment : MonoBehaviour
     }
 
     /// <summary>
-    /// Updates the sprite based on whether the card is face up or face down.
+    /// Updates the sprite based on whether the card is face up or face down,
+    /// and actualiza la visualización de stickers.
     /// </summary>
     private void UpdateCardState()
     {
@@ -101,8 +102,64 @@ public class CardAssignment : MonoBehaviour
             return;
         }
 
-        // Show the appropriate side of the card
+        // Mostrar el lado adecuado de la carta.
         cardSpriteRenderer.sprite = isFaceUp && card != null && card.Artwork != null ? card.Artwork : cardBackSprite;
+
+        // Actualizar los stickers en la carta.
+        UpdateStickers();
+    }
+
+    /// <summary>
+    /// Instancia los stickers de la carta como objetos hijos con SpriteRenderer,
+    /// utilizando el offset definido en cada sticker.
+    /// </summary>
+    private void UpdateStickers()
+    {
+        // Primero, limpiar stickers previos (asumiendo que se nombran con el prefijo "Sticker_").
+        for (int i = transform.childCount - 1; i >= 0; i--)
+        {
+            Transform child = transform.GetChild(i);
+            if (child.name.StartsWith("Sticker_"))
+            {
+                DestroyImmediate(child.gameObject);
+            }
+        }
+
+        // Si la carta no está asignada o no está face up, no se muestran stickers.
+        if (card == null || !isFaceUp)
+        {
+            return;
+        }
+
+        // Iterar sobre cada sticker de la carta y crear un objeto hijo.
+        // Se asume que la propiedad stickers de Card es privada, así que se accede solo mediante métodos (o se expone si es necesario).
+        // En este ejemplo, accedemos directamente (ya que el script actual lo permite).
+        System.Reflection.FieldInfo field = typeof(Card).GetField("stickers", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        Sticker[] cardStickers = (Sticker[])field.GetValue(card);
+
+        if (cardStickers == null)
+            return;
+
+        for (int i = 0; i < cardStickers.Length; i++)
+        {
+            Sticker sticker = cardStickers[i];
+            if (sticker == null || sticker.icon == null)
+                continue;
+
+            // Crear un nuevo GameObject para el sticker
+            GameObject stickerGO = new GameObject("Sticker_" + sticker.stickerName);
+            stickerGO.transform.SetParent(transform, false);
+            // Asignar la posición local usando el offset definido en el sticker.
+            stickerGO.transform.localPosition = sticker.spriteOffset;
+            // Opcional: ajustar escala o rotación según necesidad.
+            stickerGO.transform.localScale = Vector3.one;
+
+            // Añadir un SpriteRenderer y asignar el sprite del sticker.
+            SpriteRenderer sr = stickerGO.AddComponent<SpriteRenderer>();
+            sr.sprite = sticker.icon;
+            // Ajustar el sorting order para que el sticker se muestre sobre la carta.
+            sr.sortingOrder = cardSpriteRenderer.sortingOrder + 1;
+        }
     }
 
     /// <summary>
@@ -120,9 +177,20 @@ public class CardAssignment : MonoBehaviour
             LeanTween.scaleX(gameObject, originalScale.x, flipSpeed); // Restore original scale
         });
     }
+
+    /// <summary>
+    /// Returns the assigned card (ScriptableObject) for this instance.
+    /// </summary>
     public Card GetAssignedCard()
     {
-        return card; // 'card' debe ser la referencia al ScriptableObject asociado
+        return card;
+    }
+    /// <summary>
+    /// Método público para actualizar la visualización de la carta.
+    /// </summary>
+    public void RefreshCard()
+    {
+        UpdateCardState();
     }
 
 }

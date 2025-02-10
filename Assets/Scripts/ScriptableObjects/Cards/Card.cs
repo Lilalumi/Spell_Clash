@@ -53,6 +53,11 @@ public class Card : ScriptableObject
         set => maxStickers = Mathf.Max(0, value); // Asegura que el valor no sea negativo.
     }
 
+    /// <summary>
+    /// Agrega un sticker a la carta si no se supera el máximo permitido.
+    /// </summary>
+    /// <param name="sticker">El sticker a agregar.</param>
+    /// <returns>True si se agregó; false en caso contrario.</returns>
     public bool AddSticker(Sticker sticker)
     {
         if (stickers.Length >= maxStickers)
@@ -139,6 +144,23 @@ public class Card : ScriptableObject
         {
             Debug.LogWarning($"Sprite '{spriteName}' not found in Sprite Atlas '{spriteAtlas.name}'.");
         }
+    }
+
+    /// <summary>
+    /// Calcula el puntaje final de la carta aplicando los efectos de los stickers.
+    /// </summary>
+    /// <returns>Puntaje final después de aplicar los stickers.</returns>
+    public int GetFinalScore()
+    {
+        int finalScore = BaseScore;
+        if (stickers != null)
+        {
+            foreach (Sticker sticker in stickers)
+            {
+                finalScore = sticker.ApplyBonus(finalScore);
+            }
+        }
+        return finalScore;
     }
 
     public enum Rank
