@@ -176,6 +176,9 @@ public class PokerScoreManager : MonoBehaviour
                         currentMultiplier += 1;
                     }
 
+                    // Sumar el bonus del multiplicador proveniente de stickers de tipo BonusMultiplier.
+                    currentMultiplier += cardData.GetMultiplierBonus();
+
                     UpdateBaseAndMultiUI();
                     yield return new WaitForSeconds(scoringEffectDelay);
                 }
@@ -183,6 +186,7 @@ public class PokerScoreManager : MonoBehaviour
         }
         yield return null;
     }
+
 
 
     /// <summary>

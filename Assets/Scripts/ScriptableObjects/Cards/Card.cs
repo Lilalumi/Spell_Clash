@@ -163,6 +163,26 @@ public class Card : ScriptableObject
         return finalScore;
     }
 
+    /// <summary>
+    /// Calcula el bonus de multiplicador de la carta a partir de los stickers de tipo BonusMultiplier.
+    /// </summary>
+    /// <returns>Valor extra a sumar al multiplicador base.</returns>
+    public int GetMultiplierBonus()
+    {
+        int bonus = 0;
+        if (stickers != null)
+        {
+            foreach (Sticker sticker in stickers)
+            {
+                if (sticker != null && sticker.stickerType == Sticker.StickerType.BonusMultiplier)
+                {
+                    bonus += sticker.bonusValue;
+                }
+            }
+        }
+        return bonus;
+    }
+
     public enum Rank
     {
         None = 0,
