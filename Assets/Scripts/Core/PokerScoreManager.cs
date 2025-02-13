@@ -167,16 +167,17 @@ public class PokerScoreManager : MonoBehaviour
                     LeanTween.scale(card.gameObject, card.localScale * 1.2f, scoringEffectDelay / 2)
                             .setLoopPingPong(1);
 
-                    // Actualizar BASE usando el puntaje final de la carta, que incluye los efectos de los stickers.
-                    currentBaseScore += cardData.GetFinalScore();
+                    // Calcular base score aplicando los efectos de los stickers.
+                    int baseScoreWithBonuses = cardData.GetFinalScore();
+                    currentBaseScore += baseScoreWithBonuses;
 
-                    // Ejemplo: si la carta es un As, incrementar MULTI.
+                    // Si la carta es un As, se incrementa MULTI como bonus fijo.
                     if (cardData.rank == Card.Rank.A)
                     {
                         currentMultiplier += 1;
                     }
 
-                    // Sumar el bonus del multiplicador proveniente de stickers de tipo BonusMultiplier.
+                    // Sumar los BonusMultiplier (incrementos directos).
                     currentMultiplier += cardData.GetMultiplierBonus();
 
                     UpdateBaseAndMultiUI();
@@ -184,10 +185,42 @@ public class PokerScoreManager : MonoBehaviour
                 }
             }
         }
+
+        // Aplicar los multiplicadores de tipo Multiply Bonus Score a BASE después de procesar todas las cartas.
+        int multiplierForBase = 1;
+        int multiplierForMultiplier = 1;
+
+        foreach (Transform card in playArea)
+        {
+            CardAssignment assignment = card.GetComponent<CardAssignment>();
+            if (assignment != null)
+            {
+                Card cardData = assignment.GetAssignedCard();
+                if (scoringCards.Contains(cardData))
+                {
+                    foreach (Sticker sticker in cardData.GetStickers()) // ✅ Ahora sí existe GetStickers()
+                    {
+                        if (sticker.stickerType == Sticker.StickerType.MultiplyBonusScore)
+                        {
+                            multiplierForBase *= sticker.bonusValue;
+                        }
+                        else if (sticker.stickerType == Sticker.StickerType.MultiplyBonusMultiplier)
+                        {
+                            multiplierForMultiplier *= sticker.bonusValue;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Aplicar multiplicadores
+        currentBaseScore *= multiplierForBase;
+        currentMultiplier *= multiplierForMultiplier;
+
+        UpdateBaseAndMultiUI();
+
         yield return null;
     }
-
-
 
     /// <summary>
     /// Actualiza el texto final con el puntaje y la información de la mano.

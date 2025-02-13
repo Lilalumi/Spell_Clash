@@ -153,13 +153,25 @@ public class Card : ScriptableObject
     public int GetFinalScore()
     {
         int finalScore = BaseScore;
+
         if (stickers != null)
         {
+            // Primero aplicar las bonificaciones simples.
             foreach (Sticker sticker in stickers)
             {
                 finalScore = sticker.ApplyBonus(finalScore);
             }
+
+            // Luego aplicar las multiplicaciones.
+            foreach (Sticker sticker in stickers)
+            {
+                if (sticker.stickerType == Sticker.StickerType.MultiplyBonusScore)
+                {
+                    finalScore *= sticker.bonusValue;
+                }
+            }
         }
+
         return finalScore;
     }
 
@@ -170,8 +182,10 @@ public class Card : ScriptableObject
     public int GetMultiplierBonus()
     {
         int bonus = 0;
+
         if (stickers != null)
         {
+            // Primero sumar bonificaciones.
             foreach (Sticker sticker in stickers)
             {
                 if (sticker != null && sticker.stickerType == Sticker.StickerType.BonusMultiplier)
@@ -179,8 +193,26 @@ public class Card : ScriptableObject
                     bonus += sticker.bonusValue;
                 }
             }
+
+            // Luego aplicar multiplicaciones al multiplicador.
+            foreach (Sticker sticker in stickers)
+            {
+                if (sticker.stickerType == Sticker.StickerType.MultiplyBonusMultiplier)
+                {
+                    bonus *= sticker.bonusValue;
+                }
+            }
         }
+
         return bonus;
+    }
+
+    /// <summary>
+    /// Devuelve la lista de stickers de la carta.
+    /// </summary>
+    public Sticker[] GetStickers()
+    {
+        return stickers;
     }
 
     public enum Rank

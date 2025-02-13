@@ -27,10 +27,10 @@ public class Sticker : ScriptableObject
 
     /// <summary>
     /// Aplica el efecto del sticker sobre el puntaje base.
-    /// Por ejemplo, si el sticker otorga bonificación de puntaje o multiplicador.
+    /// Dependiendo del tipo, puede sumar o multiplicar.
     /// </summary>
     /// <param name="baseScore">Puntaje base de la carta.</param>
-    /// <returns>Nuevo puntaje luego de aplicar el efecto.</returns>
+    /// <returns>Puntaje modificado luego de aplicar el efecto.</returns>
     public int ApplyBonus(int baseScore)
     {
         switch (stickerType)
@@ -39,10 +39,16 @@ public class Sticker : ScriptableObject
                 // Suma el valor del bonus al puntaje base.
                 return baseScore + bonusValue;
             case StickerType.BonusMultiplier:
-                // Aplica un multiplicador: por ejemplo, incrementa en un porcentaje.
+                // Incrementa el puntaje base en un porcentaje.
                 return Mathf.RoundToInt(baseScore * (1f + bonusValue / 100f));
+            case StickerType.MultiplyBonusScore:
+                // Multiplica directamente el puntaje base por el valor (se interpreta como factor, e.g. 2 para duplicar).
+                return Mathf.RoundToInt(baseScore * bonusValue);
+            case StickerType.MultiplyBonusMultiplier:
+                // Este tipo se usará para afectar el multiplicador (no modifica el puntaje base).
+                return baseScore;
             case StickerType.SpecialEffect:
-                // Efectos especiales pueden implementarse de forma personalizada.
+                // Efectos especiales implementados de forma personalizada.
                 return baseScore;
             default:
                 return baseScore;
@@ -54,6 +60,8 @@ public class Sticker : ScriptableObject
         None,
         BonusScore,
         BonusMultiplier,
+        MultiplyBonusScore,
+        MultiplyBonusMultiplier,
         SpecialEffect
     }
 }
