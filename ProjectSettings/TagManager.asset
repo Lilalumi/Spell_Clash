@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Deck
   - Card
+  - Joker
   layers:
   - Default
   - TransparentFX

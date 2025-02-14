@@ -25,6 +25,15 @@ public class Sticker : ScriptableObject
     [Tooltip("Ajuste de posición para el sprite del sticker en la carta.")]
     public Vector2 spriteOffset;
 
+    public enum Rarity
+    {
+        Common,
+        Uncommon,
+        Rare,
+        Legendary
+    }
+    public Rarity rarity;
+
     /// <summary>
     /// Aplica el efecto del sticker sobre el puntaje base.
     /// Dependiendo del tipo, puede sumar o multiplicar.

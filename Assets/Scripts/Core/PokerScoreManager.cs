@@ -23,6 +23,9 @@ public class PokerScoreManager : MonoBehaviour
     [Tooltip("Zona de la mano del jugador.")]
     [SerializeField] private Transform playerHand;
 
+    // Propiedad pública para exponer playArea a otros scripts
+    public Transform PlayArea { get { return playArea; } }
+
     [Header("Animation Settings")]
     [Tooltip("Duración de la animación al mover cartas a PlayArea.")]
     [SerializeField] private float moveToPlayAreaDuration = 0.5f;
@@ -47,6 +50,13 @@ public class PokerScoreManager : MonoBehaviour
 
     // Puntaje total de todas las manos jugadas
     private int totalGameScore = 0;
+
+    // Agrega el método público para incrementar el multiplicador:
+    public void AddToMultiplier(int amount)
+    {
+        currentMultiplier += amount;
+        UpdateBaseAndMultiUI();
+    }
 
     /// <summary>
     /// Inicia la secuencia de puntuación.
@@ -90,6 +100,35 @@ public class PokerScoreManager : MonoBehaviour
         // Paso 3: Activar efectos (cada carta actualiza BASE y MULTI)
         yield return StartCoroutine(ActivateCardEffects(scoringCards));
 
+        // Paso 3.5: Activar efectos de los Jokers uno a uno con animación (tilt)
+        JokerArea jokerArea = FindObjectOfType<JokerArea>();
+        if (jokerArea != null)
+        {
+            // Obtener todos los JokerManager que sean hijos de JokerArea
+            JokerManager[] jokers = jokerArea.GetComponentsInChildren<JokerManager>();
+            // Ordenar de menor a mayor en la jerarquía (el que está más arriba tiene menor sibling index)
+            System.Array.Sort(jokers, (a, b) => a.transform.GetSiblingIndex().CompareTo(b.transform.GetSiblingIndex()));
+            
+            foreach (JokerManager jm in jokers)
+            {
+                if (jm.jokerData != null)
+                {
+                    // Realizar un tilt (rotación) para indicar que se activa el Joker.
+                    // Por ejemplo, rotar 15 grados y volver al estado original.
+                    float originalZ = jm.transform.eulerAngles.z;
+                    LeanTween.rotateZ(jm.gameObject, originalZ + 15f, 0.2f).setLoopPingPong(1);
+                    // Esperar un breve momento para mostrar la animación.
+                    yield return new WaitForSeconds(0.3f);
+                    
+                    // Aplicar el efecto del Joker; se asume que el método aplica la lógica correspondiente.
+                    jm.jokerData.ApplyEffect(this);
+                    
+                    // Esperar un breve momento para diferenciar la activación de cada Joker.
+                    yield return new WaitForSeconds(0.3f);
+                }
+            }
+        }
+
         // Paso 4: Calcular y mostrar el puntaje final
         int finalScore = currentBaseScore * currentMultiplier;
         UpdateFinalScoreUI(finalScore, bestHand);
@@ -104,7 +143,6 @@ public class PokerScoreManager : MonoBehaviour
         // Paso 5: Descartar las cartas y reemplazarlas
         yield return StartCoroutine(DiscardAndReplaceCards());
     }
-
 
     /// <summary>
     /// Mueve las cartas resaltadas de PlayerHand a PlayArea.
@@ -296,3 +334,4 @@ public class PokerScoreManager : MonoBehaviour
         }
     }
 }
+

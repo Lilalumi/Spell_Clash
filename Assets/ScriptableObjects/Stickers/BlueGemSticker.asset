@@ -18,3 +18,4 @@ MonoBehaviour:
   bonusValue: 2
   icon: {fileID: 21300000, guid: 1123f1049b5b167499ee23f944be8d35, type: 3}
   spriteOffset: {x: 0.04544377, y: 0.08715425}
+  rarity: 1
