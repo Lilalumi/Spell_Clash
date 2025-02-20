@@ -12,8 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2280f0ec2a111464cb3512fc31f0dbb7, type: 3}
   m_Name: NewMultBonusToSuitEffect
   m_EditorClassIdentifier: 
+  activationPhase: 3
   effectDescription: Played cards with Diamond suit icon Diamond suit give +3 Mult
     when scored
   effectValue: 0
+  hasActivated: 0
   targetSuit: 2
   bonusPerCard: 3

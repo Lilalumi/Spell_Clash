@@ -12,5 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aeb3a54f4ae26f3428142d4cc0203e39, type: 3}
   m_Name: CommonAdditiveMultJokerEffect
   m_EditorClassIdentifier: 
+  activationPhase: 6
   effectDescription: +4 Mult
   effectValue: 4
+  hasActivated: 0

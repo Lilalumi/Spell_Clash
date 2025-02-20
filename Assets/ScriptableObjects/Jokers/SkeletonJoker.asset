@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3457b1b5be954ee4da1bb77cb355039c, type: 3}
-  m_Name: NewJoker
+  m_Name: SkeletonJoker
   m_EditorClassIdentifier: 
   jokerName: Skeleton Joker
   rarity: 0

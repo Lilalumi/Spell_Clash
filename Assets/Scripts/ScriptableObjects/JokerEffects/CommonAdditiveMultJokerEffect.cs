@@ -10,12 +10,16 @@ public class CommonAdditiveMultJokerEffect : JokerEffect
     /// <param name="target">El objeto al que se aplicará el efecto.</param>
     public override void ApplyEffect(object target)
     {
+        // Evitar aplicar el efecto si ya se activó.
+        if (hasActivated)
+            return;
+
         // Intentar castear target a un gestor que maneje el multiplicador.
         PokerScoreManager manager = target as PokerScoreManager;
         if (manager != null)
         {
             manager.AddToMultiplier(effectValue);
+            hasActivated = true;
         }
-        // Si target no es del tipo esperado, no se aplica efecto.
     }
 }

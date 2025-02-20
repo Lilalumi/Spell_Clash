@@ -10,36 +10,24 @@ public class MultBonusToSuitEffect : JokerEffect
     public int bonusPerCard = 3;
 
     /// <summary>
-    /// Aplica el efecto del Joker: por cada carta en el área de juego que tenga el suit especificado,
-    /// se añade bonusPerCard al multiplicador del juego.
-    /// Se espera que el target sea un PokerScoreManager.
+    /// Aplica el efecto del Joker de forma global (anterior versión, se puede dejar vacía o no usarla).
     /// </summary>
-    /// <param name="target">El objeto sobre el que se aplica el efecto (debe ser un PokerScoreManager).</param>
     public override void ApplyEffect(object target)
     {
-        PokerScoreManager manager = target as PokerScoreManager;
-        if (manager == null)
-            return;
+        // Esta implementación puede quedar vacía o mostrar un warning
+    }
 
-        int bonusCount = 0;
-        // Recorremos las cartas jugadas en el PlayArea usando el getter público.
-        foreach (Transform cardTransform in manager.PlayArea)
+    /// <summary>
+    /// Aplica el efecto del Joker para una carta específica.
+    /// Si la carta cumple la condición (tiene el suit target), se añade bonusPerCard al multiplicador del manager.
+    /// </summary>
+    /// <param name="manager">El PokerScoreManager al que se aplicará el efecto.</param>
+    /// <param name="cardData">La carta que se está procesando.</param>
+    public void ApplyEffectForCard(PokerScoreManager manager, Card cardData)
+    {
+        if (cardData != null && cardData.suit == targetSuit)
         {
-            CardAssignment assignment = cardTransform.GetComponent<CardAssignment>();
-            if (assignment != null)
-            {
-                Card card = assignment.GetAssignedCard();
-                if (card != null && card.suit == targetSuit)
-                {
-                    bonusCount++;
-                }
-            }
-        }
-        
-        // Se aplica el efecto: se añade al multiplicador bonusPerCard por cada carta que cumpla la condición.
-        if(bonusCount > 0)
-        {
-            manager.AddToMultiplier(bonusPerCard * bonusCount);
+            manager.AddToMultiplier(bonusPerCard);
         }
     }
 }

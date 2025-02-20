@@ -100,7 +100,8 @@ public class PokerScoreManager : MonoBehaviour
         // Paso 3: Activar efectos (cada carta actualiza BASE y MULTI)
         yield return StartCoroutine(ActivateCardEffects(scoringCards));
 
-        // Paso 3.5: Activar efectos de los Jokers uno a uno con animación (tilt)
+        // Paso 3.5: Activar efectos de los Jokers de a uno con animación (tilt)
+        // Se activan todos los jokers, excepto aquellos de tipo MultBonusToSuitEffect, que se activarán por cada carta.
         JokerArea jokerArea = FindObjectOfType<JokerArea>();
         if (jokerArea != null)
         {
@@ -108,23 +109,35 @@ public class PokerScoreManager : MonoBehaviour
             JokerManager[] jokers = jokerArea.GetComponentsInChildren<JokerManager>();
             // Ordenar de menor a mayor en la jerarquía (el que está más arriba tiene menor sibling index)
             System.Array.Sort(jokers, (a, b) => a.transform.GetSiblingIndex().CompareTo(b.transform.GetSiblingIndex()));
-            
+
             foreach (JokerManager jm in jokers)
             {
-                if (jm.jokerData != null)
+                if (jm.jokerData != null && jm.jokerData.effect != null)
                 {
-                    // Realizar un tilt (rotación) para indicar que se activa el Joker.
-                    // Por ejemplo, rotar 15 grados y volver al estado original.
-                    float originalZ = jm.transform.eulerAngles.z;
-                    LeanTween.rotateZ(jm.gameObject, originalZ + 15f, 0.2f).setLoopPingPong(1);
-                    // Esperar un breve momento para mostrar la animación.
-                    yield return new WaitForSeconds(0.3f);
-                    
-                    // Aplicar el efecto del Joker; se asume que el método aplica la lógica correspondiente.
-                    jm.jokerData.ApplyEffect(this);
-                    
-                    // Esperar un breve momento para diferenciar la activación de cada Joker.
-                    yield return new WaitForSeconds(0.3f);
+                    // Si el efecto es de tipo MultBonusToSuitEffect, saltarlo aquí (se activará en ActivateCardEffects)
+                    if(jm.jokerData.effect is MultBonusToSuitEffect)
+                    {
+                        continue;
+                    }
+
+                    // Activar el Joker solo si aún no se ha activado (excepto si es Retrigger)
+                    if (!jm.jokerData.effect.hasActivated)
+                    {
+                        // Animación de tilt: rotar 15° y volver a la posición original
+                        float originalZ = jm.transform.eulerAngles.z;
+                        LeanTween.rotateZ(jm.gameObject, originalZ + 15f, 0.2f).setLoopPingPong(1);
+                        yield return new WaitForSeconds(0.3f);
+
+                        // Aplicar el efecto del Joker sobre el PokerScoreManager (this)
+                        jm.jokerData.ApplyEffect(this);
+
+                        // Marcar el efecto como activado, a menos que sea un joker de retrigger
+                        if(jm.jokerData.effect.activationPhase != JokerEffect.JokerActivationPhase.Retrigger)
+                        {
+                            jm.jokerData.effect.hasActivated = true;
+                        }
+                        yield return new WaitForSeconds(0.3f);
+                    }
                 }
             }
         }
@@ -142,6 +155,19 @@ public class PokerScoreManager : MonoBehaviour
 
         // Paso 5: Descartar las cartas y reemplazarlas
         yield return StartCoroutine(DiscardAndReplaceCards());
+
+        // Resetear el flag hasActivated en todos los jokers
+        if (jokerArea != null)
+        {
+            JokerManager[] jokersToReset = jokerArea.GetComponentsInChildren<JokerManager>();
+            foreach (JokerManager jm in jokersToReset)
+            {
+                if (jm.jokerData != null && jm.jokerData.effect != null)
+                {
+                    jm.jokerData.effect.hasActivated = false;
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -193,6 +219,9 @@ public class PokerScoreManager : MonoBehaviour
     /// </summary>
     private IEnumerator ActivateCardEffects(List<Card> scoringCards)
     {
+        // Obtener referencia a JokerArea (para efectos que se activan por carta)
+        JokerArea jokerArea = FindObjectOfType<JokerArea>();
+
         foreach (Transform card in playArea)
         {
             CardAssignment assignment = card.GetComponent<CardAssignment>();
@@ -201,7 +230,7 @@ public class PokerScoreManager : MonoBehaviour
                 Card cardData = assignment.GetAssignedCard();
                 if (scoringCards.Contains(cardData))
                 {
-                    // Efecto visual: escalado breve
+                    // Efecto visual: escalado breve de la carta
                     LeanTween.scale(card.gameObject, card.localScale * 1.2f, scoringEffectDelay / 2)
                             .setLoopPingPong(1);
 
@@ -220,11 +249,40 @@ public class PokerScoreManager : MonoBehaviour
 
                     UpdateBaseAndMultiUI();
                     yield return new WaitForSeconds(scoringEffectDelay);
+
+                    // --- BLOQUE PARA ACTIVAR MULTBONUSTOSUIT EFFECT POR CADA CARTA ---
+                    if (jokerArea != null)
+                    {
+                        JokerManager[] jokerManagers = jokerArea.GetComponentsInChildren<JokerManager>();
+                        foreach (JokerManager jm in jokerManagers)
+                        {
+                            if (jm.jokerData != null && jm.jokerData.effect is MultBonusToSuitEffect multEffect)
+                            {
+                                // Solo aplicar si la carta cumple la condición, es decir, si su suit coincide con el target del efecto
+                                if(cardData.suit == multEffect.targetSuit)
+                                {
+                                    // Animación de tilt: rotar 15° y volver a la posición original
+                                    float originalZ = jm.transform.eulerAngles.z;
+                                    LeanTween.rotateZ(jm.gameObject, originalZ + 15f, 0.2f)
+                                            .setLoopPingPong(1);
+                                    yield return new WaitForSeconds(0.2f);
+                                    
+                                    // Aplicar el efecto para esta carta de forma individual.
+                                    multEffect.ApplyEffectForCard(this, cardData);
+                                    
+                                    yield return new WaitForSeconds(0.2f);
+                                }
+                            }
+                        }
+                    }
+                    // --------------------------------------------------------------------
+
+                    yield return new WaitForSeconds(scoringEffectDelay);
                 }
             }
         }
 
-        // Aplicar los multiplicadores de tipo Multiply Bonus Score a BASE después de procesar todas las cartas.
+        // Aplicar los multiplicadores de tipo MultiplyBonusScore a BASE y MultiplyBonusMultiplier a MULTI
         int multiplierForBase = 1;
         int multiplierForMultiplier = 1;
 
@@ -236,7 +294,7 @@ public class PokerScoreManager : MonoBehaviour
                 Card cardData = assignment.GetAssignedCard();
                 if (scoringCards.Contains(cardData))
                 {
-                    foreach (Sticker sticker in cardData.GetStickers()) // ✅ Ahora sí existe GetStickers()
+                    foreach (Sticker sticker in cardData.GetStickers()) // Se asume que GetStickers() está implementado
                     {
                         if (sticker.stickerType == Sticker.StickerType.MultiplyBonusScore)
                         {
@@ -251,10 +309,8 @@ public class PokerScoreManager : MonoBehaviour
             }
         }
 
-        // Aplicar multiplicadores
         currentBaseScore *= multiplierForBase;
         currentMultiplier *= multiplierForMultiplier;
-
         UpdateBaseAndMultiUI();
 
         yield return null;
