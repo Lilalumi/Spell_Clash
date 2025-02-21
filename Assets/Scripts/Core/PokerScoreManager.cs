@@ -58,26 +58,83 @@ public class PokerScoreManager : MonoBehaviour
         UpdateBaseAndMultiUI();
     }
 
+    // Agrega esta propiedad en PokerScoreManager (por ejemplo, justo después de los campos actuales)
+    public BonusByTypeofHand.HandCombination ConvertBestHandTypeToHandCombination(PokerHandType bestHand)
+    {
+        string handName = bestHand.handName.ToLower();
+        Debug.Log("Evaluando BestHand: " + bestHand.handName);
+        BonusByTypeofHand.HandCombination result;
+        
+        if(handName.Contains("three of a kind"))
+        {
+            result = BonusByTypeofHand.HandCombination.ThreeOfAKind;
+        }
+        else if(handName.Contains("two pair"))
+        {
+            result = BonusByTypeofHand.HandCombination.TwoPair;
+        }
+        else if(handName.Contains("pair"))
+        {
+            result = BonusByTypeofHand.HandCombination.Pair;
+        }
+        else if(handName.Contains("full house"))
+        {
+            result = BonusByTypeofHand.HandCombination.FullHouse;
+        }
+        else if(handName.Contains("four of a kind"))
+        {
+            result = BonusByTypeofHand.HandCombination.FourOfAKind;
+        }
+        else if(handName.Contains("straight flush"))
+        {
+            result = BonusByTypeofHand.HandCombination.StraightFlush;
+        }
+        else if(handName.Contains("flush"))
+        {
+            result = BonusByTypeofHand.HandCombination.Flush;
+        }
+        else if(handName.Contains("straight"))
+        {
+            result = BonusByTypeofHand.HandCombination.Straight;
+        }
+        else
+        {
+            result = BonusByTypeofHand.HandCombination.HighCard;
+        }
+        Debug.Log("BestHandCombination asignado: " + result);
+        return result;
+    }
+
+    // Y agrega este método público:
+    public void AddToBaseScore(int amount)
+    {
+        currentBaseScore += amount;
+        UpdateBaseAndMultiUI();
+    }
+
     /// <summary>
     /// Inicia la secuencia de puntuación.
     /// Se le pasan:
     /// - bestHand: el tipo de mano detectado (con nombre y nivel).
     /// - scoringCards: las cartas que se toman en cuenta para puntuar.
     /// </summary>
+    public BonusByTypeofHand.HandCombination BestHandCombination { get; set; }
+
     public void StartScoring(PokerHandType bestHand, List<Card> scoringCards, List<Transform> highlightedCards)
     {
+        // Asigna la combinación evaluada usando la nueva conversión
+        BestHandCombination = ConvertBestHandTypeToHandCombination(bestHand);
+        
         // Establecer el piso inicial según bestHand
         currentBaseScore = bestHand.GetTotalScore();
         currentMultiplier = bestHand.GetTotalMultiplier();
         UpdateBaseAndMultiUI();
 
-        // Actualizar el texto de mano y nivel
         if (handNameAndLevelText != null)
         {
             handNameAndLevelText.text = $"{bestHand.handName} lvl. {bestHand.currentLevel}";
         }
 
-        // Iniciar la secuencia de puntuación
         StartCoroutine(ScoringSequence(bestHand, scoringCards, highlightedCards));
     }
 
