@@ -16,6 +16,6 @@ MonoBehaviour:
   effectDescription: +8 Mult if played hand contains a Pair
   effectValue: 0
   hasActivated: 0
-  rewardType: 1
-  rewardAmount: 8
+  rewardType: 3
+  rewardAmount: 4
   triggerHand: 1

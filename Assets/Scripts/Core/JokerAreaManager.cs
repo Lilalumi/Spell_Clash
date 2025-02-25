@@ -8,6 +8,9 @@ public class JokerArea : MonoBehaviour
 
     [Tooltip("Tiempo de la animación para mover los Jokers.")]
     [SerializeField] private float moveDuration = 0.3f;
+    
+    [Tooltip("Cantidad máxima de jokers permitidos en el JokerArea.")]
+    [SerializeField] private int maxJokers = 5; // Ajusta este valor desde el Inspector.
 
     private void Awake()
     {
@@ -21,7 +24,8 @@ public class JokerArea : MonoBehaviour
 
     /// <summary>
     /// Organiza los objetos hijos con el tag "Joker" de forma equidistante dentro del área definida por el collider,
-    /// y reordena la jerarquía de modo que el Joker más a la izquierda tenga el índice de hermano más bajo (más arriba en la jerarquía).
+    /// y reordena la jerarquía de modo que el Joker más a la izquierda tenga el índice de hermano más bajo.
+    /// Solo se consideran hasta maxJokers en la zona.
     /// </summary>
     public void ArrangeJokers()
     {
@@ -38,6 +42,15 @@ public class JokerArea : MonoBehaviour
                 jokerTransforms.Add(child);
         }
 
+        // Limitar la cantidad de jokers a maxJokers si es necesario
+        if (jokerTransforms.Count > maxJokers)
+        {
+            // Ordenar por posición X
+            jokerTransforms.Sort((a, b) => a.position.x.CompareTo(b.position.x));
+            // Tomar solo los primeros maxJokers
+            jokerTransforms = jokerTransforms.GetRange(0, maxJokers);
+        }
+
         int count = jokerTransforms.Count;
         if (count == 0)
             return;
@@ -52,7 +65,7 @@ public class JokerArea : MonoBehaviour
         // Ordenar los jokers según su posición X (de menor a mayor)
         jokerTransforms.Sort((a, b) => a.position.x.CompareTo(b.position.x));
 
-        // Reasignar la jerarquía: el Joker con menor X tendrá el sibling index 0 (más arriba en la jerarquía)
+        // Reasignar la jerarquía: el Joker con menor X tendrá el sibling index 0
         for (int i = 0; i < count; i++)
         {
             jokerTransforms[i].SetSiblingIndex(i);

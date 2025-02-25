@@ -3,7 +3,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "NewBonusByTypeofHand", menuName = "Jokers/Effects/BonusByTypeofHand")]
 public class BonusByTypeofHand : JokerEffect
 {
-    public enum RewardType { Base, Multiplier }
+    public enum RewardType { Base, Multiplier, BaseMultiplier, MultMultiplier }
     
     public enum HandCombination
     {
@@ -18,7 +18,7 @@ public class BonusByTypeofHand : JokerEffect
         StraightFlush
     }
 
-    [Tooltip("Tipo de recompensa que este Joker aplica (Base o Multiplier).")]
+    [Tooltip("Tipo de recompensa que este Joker aplica (Base, Multiplier, BaseMultiplier o MultMultiplier).")]
     public RewardType rewardType;
     
     [Tooltip("Cantidad de la recompensa a aplicar.")]
@@ -31,7 +31,8 @@ public class BonusByTypeofHand : JokerEffect
     /// Aplica el efecto del Joker basado en el tipo de mano.
     /// Se espera que target sea un PokerScoreManager que tenga:
     /// - Una propiedad BestHandCombination (de tipo HandCombination).
-    /// - Métodos AddToMultiplier(int) y AddToBaseScore(int).
+    /// - Métodos AddToMultiplier(int), AddToBaseScore(int),
+    ///   MultiplyToMultiplier(int) y MultiplyToBaseScore(int).
     /// </summary>
     /// <param name="target">El objeto al que se aplicará el efecto.</param>
     public override void ApplyEffect(object target)
@@ -40,19 +41,27 @@ public class BonusByTypeofHand : JokerEffect
         if (manager == null)
             return;
 
-        // Se activa el efecto si la BestHandCombination NO es de los tipos que NO contienen par.
+        // Se activa el efecto si la BestHandCombination indica que la mano contiene par.
+        // En este ejemplo, asumimos que las manos que no sean HighCard, Straight, Flush o StraightFlush contienen par.
         if (manager.BestHandCombination != HandCombination.HighCard &&
             manager.BestHandCombination != HandCombination.Straight &&
             manager.BestHandCombination != HandCombination.Flush &&
             manager.BestHandCombination != HandCombination.StraightFlush)
         {
-            if (rewardType == RewardType.Multiplier)
+            switch(rewardType)
             {
-                manager.AddToMultiplier(rewardAmount);
-            }
-            else if (rewardType == RewardType.Base)
-            {
-                manager.AddToBaseScore(rewardAmount);
+                case RewardType.Multiplier:
+                    manager.AddToMultiplier(rewardAmount);
+                    break;
+                case RewardType.Base:
+                    manager.AddToBaseScore(rewardAmount);
+                    break;
+                case RewardType.MultMultiplier:
+                    manager.MultiplyToMultiplier(rewardAmount);
+                    break;
+                case RewardType.BaseMultiplier:
+                    manager.MultiplyToBaseScore(rewardAmount);
+                    break;
             }
             hasActivated = true;
         }

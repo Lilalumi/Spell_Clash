@@ -58,6 +58,18 @@ public class PokerScoreManager : MonoBehaviour
         UpdateBaseAndMultiUI();
     }
 
+    public void MultiplyToMultiplier(int factor)
+    {
+        currentMultiplier *= factor;
+        UpdateBaseAndMultiUI();
+    }
+
+    public void MultiplyToBaseScore(int factor)
+    {
+        currentBaseScore *= factor;
+        UpdateBaseAndMultiUI();
+    }
+
     // Agrega esta propiedad en PokerScoreManager (por ejemplo, justo después de los campos actuales)
     public BonusByTypeofHand.HandCombination ConvertBestHandTypeToHandCombination(PokerHandType bestHand)
     {

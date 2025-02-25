@@ -3040,6 +3040,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   moveDuration: 0.3
+  maxJokers: 5
 --- !u!61 &1700169173
 BoxCollider2D:
   m_ObjectHideFlags: 0
