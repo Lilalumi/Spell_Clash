@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3457b1b5be954ee4da1bb77cb355039c, type: 3}
+  m_Name: StormTotemJoker
+  m_EditorClassIdentifier: 
+  jokerName: Storm Totem
+  rarity: 0
+  jokerSprite: {fileID: 21300000, guid: 01f0cd88e385a934f8c1c1f5141fda45, type: 3}
+  effect: {fileID: 11400000, guid: f833d040d19412641944edfeeff91999, type: 2}
